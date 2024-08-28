@@ -1,8 +1,21 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
 }
 
 canvas {
   display: block;
+}
+
+.container {
+  display:flex;
+}
+#mandelbrot {
+  margin-left: 40px;
+}
+
+#julia {
+  margin-left: 40px;
+  flex-grow: 1;
 }
