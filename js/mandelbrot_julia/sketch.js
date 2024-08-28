@@ -1,9 +1,6 @@
 const im_res = 900;
 const zoomIntensity = 0.1;
 const max_iter = 100;
-const colorsRed = [];
-const colorsGreen = [];
-const colorsBlue = [];
 
 let julia_ca = 0.0;
 let julia_cb = 0.0;
@@ -22,16 +19,7 @@ var mandelbrot = function (p) {
   p.setup = function () {
     var canvas = p.createCanvas(im_res, im_res);
     canvas.parent("#mandelbrot");
-
     p.pixelDensity(1);
-    p.colorMode(p.HSB, 1);
-    for (let n = 0; n < max_iter; n++) {
-      let hu = p.sqrt(n / max_iter);
-      let col = p.color(hu, 0.7, 0.9);
-      colorsRed[n] = p.red(col);
-      colorsGreen[n] = p.green(col);
-      colorsBlue[n] = p.blue(col);
-    }
   };
 
   p.draw = function () {
@@ -59,10 +47,12 @@ var mandelbrot = function (p) {
           p.pixels[pix + 0] = 0;
           p.pixels[pix + 1] = 0;
           p.pixels[pix + 2] = 0;
+          p.pixels[pix + 3] = 255;
         } else {
-          p.pixels[pix + 0] = colorsRed[n];
-          p.pixels[pix + 1] = colorsGreen[n];
-          p.pixels[pix + 2] = colorsBlue[n];
+          p.pixels[pix + 0] = p.sqrt(n/max_iter)*255 ;
+          p.pixels[pix + 1] = 35;
+          p.pixels[pix + 2] = 100;
+          p.pixels[pix + 3] = 255;
         }
       }
     }
@@ -84,11 +74,11 @@ var mandelbrot = function (p) {
     var dx = p.map(p.mouseX, 0, im_res, cx - scale, cx + scale);
     var dy = p.map(p.mouseY, 0, im_res, cy - scale, cy + scale);
 
-    const zoom = event.deltaY < 0 ? -zoomIntensity : zoomIntensity;
     ratio_x = (cx + scale - dx) / (dx - cx + scale);
     ratio_y = (cy + scale - dy) / (dy - cy + scale);
 
-    scale += zoom;
+    const zoom = event.deltaY < 0 ? Math.exp(-zoomIntensity) : Math.exp(zoomIntensity);
+    scale *= zoom;
 
     cx = (ratio_x * (dx + scale) - scale + dx) / (1 + ratio_x);
     cy = (ratio_y * (dy + scale) - scale + dy) / (1 + ratio_y);
@@ -103,7 +93,6 @@ var julia = function (p) {
     var canvas = p.createCanvas(im_res, im_res);
     canvas.parent("#julia");
     p.pixelDensity(1);
-    p.colorMode(p.HSB, 1);
   };
 
   p.draw = function () {
@@ -129,10 +118,12 @@ var julia = function (p) {
           p.pixels[pix + 0] = 0;
           p.pixels[pix + 1] = 0;
           p.pixels[pix + 2] = 0;
+          p.pixels[pix + 3] = 255;
         } else {
-          p.pixels[pix + 0] = colorsRed[n];
-          p.pixels[pix + 1] = colorsGreen[n];
-          p.pixels[pix + 2] = colorsBlue[n];
+          p.pixels[pix + 0] = p.sqrt(n/max_iter)*255 ;
+          p.pixels[pix + 1] = 35;
+          p.pixels[pix + 2] = 100;
+          p.pixels[pix + 3] = 255;
         }
       }
     }
@@ -146,11 +137,11 @@ var julia = function (p) {
     var dx = p.map(p.mouseX, 0, im_res, cx - scale, cx + scale);
     var dy = p.map(p.mouseY, 0, im_res, cy - scale, cy + scale);
 
-    const zoom = event.deltaY < 0 ? -zoomIntensity : zoomIntensity;
     ratio_x = (cx + scale - dx) / (dx - cx + scale);
     ratio_y = (cy + scale - dy) / (dy - cy + scale);
 
-    scale += zoom;
+    const zoom = event.deltaY < 0 ? Math.exp(-zoomIntensity) : Math.exp(zoomIntensity);
+    scale *= zoom;
 
     cx = (ratio_x * (dx + scale) - scale + dx) / (1 + ratio_x);
     cy = (ratio_y * (dy + scale) - scale + dy) / (1 + ratio_y);
