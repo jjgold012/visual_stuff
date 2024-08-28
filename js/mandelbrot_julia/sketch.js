@@ -148,6 +148,5 @@ var julia = function (p) {
   };
 };
 
-var myFirstSketch = new p5(mandelbrot);
-
-var mySecondSketch = new p5(julia);
+var mandelbrotSketch = new p5(mandelbrot);
+var juliaSketch = new p5(julia);
