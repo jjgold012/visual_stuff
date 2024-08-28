@@ -59,14 +59,12 @@ function set_param_inputs(selected) {
     }
   }
   scale = "scale" in params ? params["scale"] : 1;
-
-  draw();
 }
 
 function setup() {
   createCanvas(1000, 1000);
   let ferns = createSelect(false);
-  ferns.position(1040, 20);
+  ferns.position(width + 40, 20);
   for (let i = 0; i < ferns_params.length; i++) {
     ferns.option(ferns_params[i]["name"]);
   }
@@ -75,24 +73,26 @@ function setup() {
   for (let i = 0; i < 4; i++) {
     let f_name = "f" + str(i + 1);
     let t = createP(f_name);
-    t.position(1040 + i * 40, 50);
+    t.position(width + 40 + i * 40, 50);
     param_inputs[f_name] = {};
     for (let j = 0; j < param_names.length; j++) {
       if (i == 0) {
         let p = createP(param_names[j]);
-        p.position(1010, (j + 1) * 40 + 50);
+        p.position(width + 10, (j + 1) * 40 + 50);
       }
       var param = createInput();
-      param.position(1040 + i * 40, (j + 1.5) * 40 + 50);
+      param.position(width + 40 + i * 40, (j + 1.5) * 40 + 50);
       param.size(30);
       param_inputs[f_name][param_names[j]] = param;
     }
   }
+  let p = createP("Number of iterations");
+  p.position(width+40, 380)
   max_iter = createInput(100000);
-  max_iter.position(1040, 400);
+  max_iter.position(width + 40, 420);
   max_iter.size(70)
   let b = createButton("Draw");
-  b.position(1120, 400);
+  b.position(width + 120, 420);
   b.size(60);
   b.mouseClicked(() => draw());
   pixelDensity(1);
