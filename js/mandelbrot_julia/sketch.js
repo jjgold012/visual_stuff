@@ -1,14 +1,21 @@
+// const math = require("mathjs");
+
 const im_res = 900;
 const zoomIntensity = 0.1;
 const max_iter = 100;
-
+const C = [];
 let julia_ca = 0.0;
 let julia_cb = 0.0;
+let pow_slider;
+
+function Complex(a, b) {
+  this.r = Math.sqrt(a*a+b*b);
+  this.theta = Math.atan2(a,b);
+}
+
 
 function mouse_on_canves(mousex, mousey) {
-  return (
-    (0 < mousex) & (mousex < im_res) & (0 < mousey) & (mousey < im_res)
-  );
+  return (0 < mousex) & (mousex < im_res) & (0 < mousey) & (mousey < im_res);
 }
 
 var mandelbrot = function (p) {
@@ -19,25 +26,30 @@ var mandelbrot = function (p) {
   p.setup = function () {
     var canvas = p.createCanvas(im_res, im_res);
     canvas.parent("#mandelbrot");
+    pow_slider = p.createSlider(-7, 7, 2, 0.1);
+    pow_slider.position(100, p.height);
+    for (var x = 0; x < p.width; x++) {
+      C[x]=[]
+      for (var y = 0; y < p.height; y++) {
+        var a = p.map(x, 0, p.width, cx - scale, cx + scale);
+        var b = p.map(y, 0, p.height, cy - scale, cy + scale);
+        C[x][y] = Complex()
     p.pixelDensity(1);
   };
 
   p.draw = function () {
     p.background(0, 0, 0);
     p.loadPixels();
-    for (var x = 0; x < im_res; x++) {
-      for (var y = 0; y < im_res; y++) {
-        var ca = p.map(x, 0, im_res, cx - scale, cx + scale);
-        var cb = p.map(y, 0, im_res, cy - scale, cy + scale);
-        var a = 0.0;
-        var b = 0.0;
+    for (var x = 0; x < p.width; x++) {
+      for (var y = 0; y < p.height; y++) {
+        var cre = p.map(x, 0, p.width, cx - scale, cx + scale);
+        var cim = p.map(y, 0, p.height, cy - scale, cy + scale);
+        var c = math.complex(cre, cim);
+        var z = math.complex(0, 0);
         var n = 0;
         while (n < max_iter) {
-          var aa_bb = a * a - b * b;
-          var two_ab = 2 * a * b;
-          a = aa_bb + ca;
-          b = two_ab + cb;
-          if (a * a + b * b > 16) {
+          z = math.add(math.pow(z, pow_slider.value()), c);
+          if (math.abs(z) > 16) {
             break;
           }
           n++;
@@ -49,7 +61,7 @@ var mandelbrot = function (p) {
           p.pixels[pix + 2] = 0;
           p.pixels[pix + 3] = 255;
         } else {
-          p.pixels[pix + 0] = p.sqrt(n/max_iter)*255 ;
+          p.pixels[pix + 0] = p.sqrt(n / max_iter) * 255;
           p.pixels[pix + 1] = 35;
           p.pixels[pix + 2] = 100;
           p.pixels[pix + 3] = 255;
@@ -63,9 +75,9 @@ var mandelbrot = function (p) {
     }
   };
 
-  p.mouseClicked = function(){
+  p.mouseClicked = function () {
     set_julia_c = !set_julia_c;
-  }
+  };
 
   p.mouseWheel = function (event) {
     if (!mouse_on_canves(p.mouseX, p.mouseY)) {
@@ -77,7 +89,8 @@ var mandelbrot = function (p) {
     ratio_x = (cx + scale - dx) / (dx - cx + scale);
     ratio_y = (cy + scale - dy) / (dy - cy + scale);
 
-    const zoom = event.deltaY < 0 ? Math.exp(-zoomIntensity) : Math.exp(zoomIntensity);
+    const zoom =
+      event.deltaY < 0 ? Math.exp(-zoomIntensity) : Math.exp(zoomIntensity);
     scale *= zoom;
 
     cx = (ratio_x * (dx + scale) - scale + dx) / (1 + ratio_x);
@@ -120,7 +133,7 @@ var julia = function (p) {
           p.pixels[pix + 2] = 0;
           p.pixels[pix + 3] = 255;
         } else {
-          p.pixels[pix + 0] = p.sqrt(n/max_iter)*255 ;
+          p.pixels[pix + 0] = p.sqrt(n / max_iter) * 255;
           p.pixels[pix + 1] = 35;
           p.pixels[pix + 2] = 100;
           p.pixels[pix + 3] = 255;
@@ -140,7 +153,8 @@ var julia = function (p) {
     ratio_x = (cx + scale - dx) / (dx - cx + scale);
     ratio_y = (cy + scale - dy) / (dy - cy + scale);
 
-    const zoom = event.deltaY < 0 ? Math.exp(-zoomIntensity) : Math.exp(zoomIntensity);
+    const zoom =
+      event.deltaY < 0 ? Math.exp(-zoomIntensity) : Math.exp(zoomIntensity);
     scale *= zoom;
 
     cx = (ratio_x * (dx + scale) - scale + dx) / (1 + ratio_x);
