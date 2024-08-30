@@ -1,7 +1,5 @@
 function setup() {
-  createCanvas(400, 400);
-  let x = math.complex('4+5i')
-  print(x)
+  createCanvas(1000, 1000);
 }
 
 function draw() {
