@@ -1,3 +1,4 @@
 plotly
 jupyter
 numpy
+ipycanvas
