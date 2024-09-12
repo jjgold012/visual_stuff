@@ -1,4 +1,6 @@
 plotly
 jupyter
+jupyter_rfb
 numpy
 ipycanvas
+vispy
