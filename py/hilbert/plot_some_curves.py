@@ -171,5 +171,5 @@ if __name__ == "__main__":
     g = 4
     # plot_remap()
     plot_hilbert_curve(h, colormap='new_cmap', save_svg=f'hilbert_curve_{h}.svg')
-    # plot_dragon_curve(d, colormap='new_cmap', save_svg=f'dragon_curve_{d}.svg')
-    # plot_gosper_curve(g, colormap='cyclic_rainbow', save_svg=f'gosper_curve_{g}.svg')
+    plot_dragon_curve(d, colormap='new_cmap', save_svg=f'dragon_curve_{d}.svg')
+    plot_gosper_curve(g, colormap='cyclic_rainbow', save_svg=f'gosper_curve_{g}.svg')
