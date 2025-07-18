@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>SVG Live Color Editor</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+    }
+
+    #svg-container {
+      border: 1px solid #ccc;
+      min-height: 400px;
+      margin-top: 1em;
+    }
+
+    .color-picker {
+      margin: 0.5em 0;
+    }
+
+    .controls {
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>SVG Live Color Editor</h2>
+  <div class="controls">
+    <input type="file" id="svgFile" accept=".svg">
+    <button id="downloadBtn" disabled>Download SVG</button>
+    <br>
+    <label>Pick color 1: <input type="color" id="color1" class="color-picker" value="#ff0000"></label>
+    <label>Pick color 2: <input type="color" id="color2" class="color-picker" value="#00ff00"></label>
+    <label>Pick color 3: <input type="color" id="color3" class="color-picker" value="#0000ff"></label>
+    <button id="applyBtn" disabled>Apply Colors</button>
+  </div>
+  <div id="svg-container"></div>
+  <script>
+    let svgDoc = null;
+
+    function hexToRgb(hex) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+      const num = parseInt(hex, 16);
+      return [num >> 16 & 255, num >> 8 & 255, num & 255];
+    }
+    function rgbToHex([r, g, b]) {
+      return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+    function lerpColor(c1, c2, t) {
+      const rgb1 = hexToRgb(c1);
+      const rgb2 = hexToRgb(c2);
+      return rgbToHex([
+        Math.round(lerp(rgb1[0], rgb2[0], t)),
+        Math.round(lerp(rgb1[1], rgb2[1], t)),
+        Math.round(lerp(rgb1[2], rgb2[2], t))
+      ]);
+    }
+
+    function getPolygonCentroid(points) {
+      return points.reduce((sum, p) => sum + p[1], 0) / points.length;
+    }
+    function getPathCentroid(pathElem) {
+      // Try to use getBBox if available
+      if (typeof pathElem.getBBox === 'function') {
+        try {
+          const bbox = pathElem.getBBox();
+          return bbox.y + bbox.height / 2;
+        } catch (e) { }
+      }
+      // Fallback: try to parse M/m/L/l commands
+      const d = pathElem.getAttribute('d');
+      if (!d) return 0;
+      const matches = [...d.matchAll(/[MLml]\s*([\d.-]+)[, ]+([\d.-]+)/g)];
+      if (matches.length === 0) return 0;
+      const ys = matches.map(m => parseFloat(m[2]));
+      return ys.reduce((a, b) => a + b, 0) / ys.length;
+    }
+
+    function updateSVGColors() {
+      if (!svgDoc) return;
+      const c1 = document.getElementById('color1').value;
+      const c2 = document.getElementById('color2').value;
+      const c3 = document.getElementById('color3').value;
+      // Build 5-color palette: c1, c1-c2 blend, c2, c2-c3 blend, c3
+      const palette = [
+        c1,
+        lerpColor(c1, c2, 0.5),
+        c2,
+        lerpColor(c2, c3, 0.5),
+        c3
+      ];
+      // Select both polygons and paths
+      const polygons = Array.from(svgDoc.querySelectorAll('polygon'));
+      const paths = Array.from(svgDoc.querySelectorAll('path'));
+      const allShapes = polygons.concat(paths);
+      if (allShapes.length === 0) return;
+      // Get min/max y for vertical mapping
+      let minY = Infinity, maxY = -Infinity;
+      allShapes.forEach(shape => {
+        let cy = 0;
+        if (shape.tagName === 'polygon') {
+          const points = shape.getAttribute('points').trim().split(/\s+/)
+            .map(pt => pt.split(',').map(Number));
+          cy = getPolygonCentroid(points);
+        } else if (shape.tagName === 'path') {
+          cy = getPathCentroid(shape);
+        }
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+      });
+      // Assign color by vertical position (bottom to top), randomly but weighted by t
+      allShapes.forEach(shape => {
+        let cy = 0;
+        if (shape.tagName === 'polygon') {
+          const points = shape.getAttribute('points').trim().split(/\s+/)
+            .map(pt => pt.split(',').map(Number));
+          cy = getPolygonCentroid(points);
+        } else if (shape.tagName === 'path') {
+          cy = getPathCentroid(shape);
+        }
+        const t = (cy - minY) / (maxY - minY);
+        // Probabilities: favor palette[0] at bottom, palette[4] at top, palette[2] in middle
+        const probs = [
+          Math.max(0, 1 - t),
+          Math.max(0, 1 - Math.abs(t - 0.25) * 4),
+          1 - Math.abs(t - 0.5) * 2,
+          Math.max(0, 1 - Math.abs(t - 0.75) * 4),
+          Math.max(0, t)
+        ];
+        const total = probs.reduce((a, b) => a + b, 0);
+        const norm = probs.map(p => p / total);
+        const r = Math.random();
+        let acc = 0, color = palette[0];
+        for (let i = 0; i < norm.length; ++i) {
+          acc += norm[i];
+          if (r < acc) {
+            color = palette[i];
+            break;
+          }
+        }
+        // Add random opacity between 0.5 and 1
+        const opacity = 0.5 + Math.random() * 0.5;
+        shape.setAttribute('fill', color);
+        shape.style.fill = color;
+        shape.setAttribute('opacity', opacity);
+        shape.style.opacity = opacity;
+      });
+    }
+
+    document.getElementById('svgFile').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        document.getElementById('svg-container').innerHTML = ev.target.result;
+        svgDoc = document.getElementById('svg-container').querySelector('svg');
+        // Set viewBox to fit all elements
+        if (svgDoc && typeof svgDoc.getBBox === 'function') {
+          try {
+            const bbox = svgDoc.getBBox();
+            svgDoc.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+          } catch (e) { }
+        }
+        document.getElementById('applyBtn').disabled = false;
+        document.getElementById('downloadBtn').disabled = false;
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('applyBtn').addEventListener('click', updateSVGColors);
+
+    document.getElementById('downloadBtn').addEventListener('click', function () {
+      if (!svgDoc) return;
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svgDoc);
+      // Add XML declaration if missing
+      if (!source.startsWith('<?xml')) {
+        source = '<?xml version="1.0" encoding="UTF-8"?>\n' + source;
+      }
+      const blob = new Blob([source], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'edited.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+
+</html>
