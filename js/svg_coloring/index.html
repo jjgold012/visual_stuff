@@ -23,6 +23,18 @@
     .controls {
       margin-bottom: 1em;
     }
+
+    #palette-bar {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 1em;
+      height: 32px;
+    }
+
+    .swatch {
+      flex: 1 1 0;
+      height: 100%;
+    }
   </style>
 </head>
 
@@ -37,6 +49,7 @@
     <label>Pick color 3: <input type="color" id="color3" class="color-picker" value="#0000ff"></label>
     <button id="applyBtn" disabled>Apply Colors</button>
   </div>
+  <div id="palette-bar"></div>
   <div id="svg-container"></div>
   <script>
     let svgDoc = null;
@@ -115,7 +128,7 @@
         if (cy < minY) minY = cy;
         if (cy > maxY) maxY = cy;
       });
-      // Assign color by vertical position (bottom to top), randomly but weighted by t
+      // Assign color by vertical position (bottom to top), random between two neighboring palette colors
       allShapes.forEach(shape => {
         let cy = 0;
         if (shape.tagName === 'polygon') {
@@ -126,31 +139,39 @@
           cy = getPathCentroid(shape);
         }
         const t = (cy - minY) / (maxY - minY);
-        // Probabilities: favor palette[0] at bottom, palette[4] at top, palette[2] in middle
-        const probs = [
-          Math.max(0, 1 - t),
-          Math.max(0, 1 - Math.abs(t - 0.25) * 4),
-          1 - Math.abs(t - 0.5) * 2,
-          Math.max(0, 1 - Math.abs(t - 0.75) * 4),
-          Math.max(0, t)
-        ];
-        const total = probs.reduce((a, b) => a + b, 0);
-        const norm = probs.map(p => p / total);
-        const r = Math.random();
-        let acc = 0, color = palette[0];
-        for (let i = 0; i < norm.length; ++i) {
-          acc += norm[i];
-          if (r < acc) {
-            color = palette[i];
-            break;
-          }
-        }
+        const idx = t * (palette.length - 1);
+        const i = Math.floor(idx);
+        const j = Math.min(i + 1, palette.length - 1);
+        // Randomly pick between palette[i] and palette[j], weighted by distance
+        const frac = idx - i;
+        const color = Math.random() < frac ? palette[j] : palette[i];
         // Add random opacity between 0.5 and 1
         const opacity = 0.5 + Math.random() * 0.5;
         shape.setAttribute('fill', color);
         shape.style.fill = color;
         shape.setAttribute('opacity', opacity);
         shape.style.opacity = opacity;
+      });
+    }
+
+    function updatePaletteBar() {
+      const c1 = document.getElementById('color1').value;
+      const c2 = document.getElementById('color2').value;
+      const c3 = document.getElementById('color3').value;
+      const palette = [
+        c1,
+        lerpColor(c1, c2, 0.5),
+        c2,
+        lerpColor(c2, c3, 0.5),
+        c3
+      ];
+      const bar = document.getElementById('palette-bar');
+      bar.innerHTML = '';
+      palette.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.classList.add('swatch');
+        swatch.style.background = color;
+        bar.appendChild(swatch);
       });
     }
 
@@ -170,6 +191,7 @@
         }
         document.getElementById('applyBtn').disabled = false;
         document.getElementById('downloadBtn').disabled = false;
+        updatePaletteBar();
       };
       reader.readAsText(file);
     });
@@ -194,6 +216,14 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
+
+    // Update palette bar on color change
+    document.getElementById('color1').addEventListener('input', updatePaletteBar);
+    document.getElementById('color2').addEventListener('input', updatePaletteBar);
+    document.getElementById('color3').addEventListener('input', updatePaletteBar);
+
+    // Initialize palette bar on page load
+    updatePaletteBar();
   </script>
 </body>
 
