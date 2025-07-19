@@ -157,13 +157,21 @@
       const c1 = document.getElementById('color1').value;
       const c2 = document.getElementById('color2').value;
       const c3 = document.getElementById('color3').value;
+      // const palette = [
+      //   c1,
+      //   lerpColorCMYK(c1, c2, 0.5),
+      //   c2,
+      //   lerpColorCMYK(c2, c3, 0.5),
+      //   c3
+      // ];
       const palette = [
         c1,
-        lerpColorCMYK(c1, c2, 0.5),
+        lerpColor(c1, c2, 0.5),
         c2,
-        lerpColorCMYK(c2, c3, 0.5),
+        lerpColor(c2, c3, 0.5),
         c3
       ];
+      
       const polygons = Array.from(svgDoc.querySelectorAll('polygon'));
       const paths = Array.from(svgDoc.querySelectorAll('path'));
       const allShapes = polygons.concat(paths);
@@ -171,55 +179,27 @@
       const colorMode = document.getElementById('colorMode').value;
       let minVal = Infinity, maxVal = -Infinity;
       let cx = 0, cy = 0;
-      if (colorMode === 'radial') {
-        // Compute SVG center from viewBox if available, else getBBox
-        let vb = svgDoc.getAttribute('viewBox');
-        if (vb) {
-          const [x, y, w, h] = vb.split(/\s+/).map(Number);
-          cx = x + w / 2;
-          cy = y + h / 2;
-        } else if (typeof svgDoc.getBBox === 'function') {
-          try {
-            const bbox = svgDoc.getBBox();
-            cx = bbox.x + bbox.width / 2;
-            cy = bbox.y + bbox.height / 2;
-          } catch (e) { cx = 0; cy = 0; }
-        }
+      
+      let vb = svgDoc.getAttribute('viewBox');
+      const [x, y, w, h] = vb.split(/\s+/).map(Number);
+      cx =  (w - x) / 2;
+      cy = (h - y) / 2;
+      
+      if (colorMode === 'vertical') {
+        minVal = y;
+        maxVal = h;// Reset Y to 0 for vertical mode
+        
+      } else if (colorMode === 'radial') {
+        minVal = 0;
+        maxVal = Math.max(cx, cy);
       }
-      // Get min/max for mapping
-      allShapes.forEach(shape => {
-        const points = shape.getAttribute('points').trim().split(/\s+/)
-          .map(pt => pt.split(',').map(Number));
-        let cxy = [0, 0];
-        if (shape.tagName === 'polygon') {
-          cxy = getPolygonCentroidXY(points);
-        } else if (shape.tagName === 'path') {
-          cxy = getPathCentroidXY(shape);
-        }
-        if (shape.getAttribute('transform')) {
-          // If shape has a transform, we need to apply it to the centroid
-          const transform = shape.getAttribute('transform');
-          const match = transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
-          if (match) {
-            cxy[0] += parseFloat(match[1]);
-            cxy[1] += parseFloat(match[2]);
-          }
-        }
-        let v = 0;
-        if (colorMode === 'vertical') {
-          v = cxy[1]; // Use Y coordinate for vertical mode
-        } else if (colorMode === 'radial') {
-          v = Math.sqrt((cxy[0] - cx) ** 2 + (cxy[1] - cy) ** 2);
-        }
-        if (v < minVal) minVal = v;
-        if (v > maxVal) maxVal = v;
-      });
+      
       // Assign color by chosen mode
       allShapes.forEach(shape => {
-        const points = shape.getAttribute('points').trim().split(/\s+/)
-          .map(pt => pt.split(',').map(Number));
         let cxy = [0, 0];
         if (shape.tagName === 'polygon') {
+          const points = shape.getAttribute('points').trim().split(/\s+/)
+            .map(pt => pt.split(',').map(Number));
           cxy = getPolygonCentroidXY(points);
         } else if (shape.tagName === 'path') {
           cxy = getPathCentroidXY(shape);
@@ -241,7 +221,7 @@
         }
         const t = (v - minVal) / (maxVal - minVal);
         const idx = t * (palette.length - 1);
-        const i = Math.floor(idx);
+        const i = Math.min(Math.floor(idx), palette.length - 1);
         const j = Math.min(i + 1, palette.length - 1);
         const frac = idx - i;
         const color = Math.random() < frac ? palette[j] : palette[i];
