@@ -51,6 +51,7 @@
     <br>
     <label>Color mode:
       <select id="colorMode">
+        <option value="horizontal">Horizontal</option>
         <option value="vertical">Vertical</option>
         <option value="radial">Radial</option>
       </select>
@@ -185,10 +186,12 @@
       cx =  (w - x) / 2;
       cy = (h - y) / 2;
       
-      if (colorMode === 'vertical') {
+      if (colorMode === 'horizontal') {
+        minVal = x;
+        maxVal = w; // Reset X to 0 for horizontal mode
+      } else if (colorMode === 'vertical') {
         minVal = y;
-        maxVal = h;// Reset Y to 0 for vertical mode
-        
+        maxVal = h; // Reset Y to 0 for vertical mode
       } else if (colorMode === 'radial') {
         minVal = 0;
         maxVal = Math.max(cx, cy);
@@ -214,6 +217,9 @@
           }
         }
         let v = 0;
+        if (colorMode === 'horizontal') {
+          v = cxy[0]; // Use X coordinate for horizontal mode
+        } else
         if (colorMode === 'vertical') {
           v = cxy[1]; // Use Y coordinate for vertical mode
         } else if (colorMode === 'radial') {
@@ -237,11 +243,18 @@
       const c1 = document.getElementById('color1').value;
       const c2 = document.getElementById('color2').value;
       const c3 = document.getElementById('color3').value;
+      // const palette = [
+      //   c1,
+      //   lerpColorCMYK(c1, c2, 0.5),
+      //   c2,
+      //   lerpColorCMYK(c2, c3, 0.5),
+      //   c3
+      // ];
       const palette = [
         c1,
-        lerpColorCMYK(c1, c2, 0.5),
+        lerpColor(c1, c2, 0.5),
         c2,
-        lerpColorCMYK(c2, c3, 0.5),
+        lerpColor(c2, c3, 0.5),
         c3
       ];
       const bar = document.getElementById('palette-bar');
