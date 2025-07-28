@@ -183,15 +183,15 @@
       
       let vb = svgDoc.getAttribute('viewBox');
       const [x, y, w, h] = vb.split(/\s+/).map(Number);
-      cx =  (w - x) / 2;
-      cy = (h - y) / 2;
+      cx =  (w + 2*x) / 2;
+      cy = (h + 2*y) / 2;
       
       if (colorMode === 'horizontal') {
         minVal = x;
-        maxVal = w; // Reset X to 0 for horizontal mode
+        maxVal = x+w; // Reset X to 0 for horizontal mode
       } else if (colorMode === 'vertical') {
         minVal = y;
-        maxVal = h; // Reset Y to 0 for vertical mode
+        maxVal = y+h; // Reset Y to 0 for vertical mode
       } else if (colorMode === 'radial') {
         minVal = 0;
         maxVal = Math.max(cx, cy);
