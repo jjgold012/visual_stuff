@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>SVG Live Color Editor</title>
+  <script src="https://unpkg.com/chroma-js@2.4.2/chroma.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -44,9 +45,6 @@
     <input type="file" id="svgFile" accept=".svg">
     <button id="downloadBtn" disabled>Download SVG</button>
     <br>
-    <label>Pick color 1: <input type="color" id="color1" class="color-picker" value="#ff0000"></label>
-    <label>Pick color 2: <input type="color" id="color2" class="color-picker" value="#00ff00"></label>
-    <label>Pick color 3: <input type="color" id="color3" class="color-picker" value="#0000ff"></label>
     <button id="applyBtn" disabled>Apply Colors</button>
     <br>
     <label>Color mode:
@@ -56,6 +54,25 @@
         <option value="radial">Radial</option>
       </select>
     </label>
+    <label style="margin-left:1em;">Randomness:
+      <input type="range" id="randomness" min="0" max="1" step="0.01" value="1" style="vertical-align:middle;width:120px;">
+      <span id="randomnessValue">1.00</span>
+    </label>
+    <label style="margin-left:1em;">Colormap:
+      <select id="colormap">
+        <option value="custom">Custom</option>
+        <option value="viridis">Viridis</option>
+        <option value="inferno">Inferno</option>
+        <option value="magma">Magma</option>
+        <option value="plasma">Plasma</option>
+        <option value="cividis">Cividis</option>
+      </select>
+    </label>
+    <span id="customColors">
+      <label>Pick color 1: <input type="color" id="color1" class="color-picker" value="#ff0000"></label>
+      <label>Pick color 2: <input type="color" id="color2" class="color-picker" value="#00ff00"></label>
+      <label>Pick color 3: <input type="color" id="color3" class="color-picker" value="#0000ff"></label>
+    </span>
   </div>
   <div id="palette-bar"></div>
   <div id="svg-container"></div>
@@ -153,26 +170,97 @@
       ];
     }
 
+    // Colormap using chroma.js
+    function getColormapColor(map, t) {
+      // t in [0,1]
+      let scale;
+      if (chroma.brewer[map]) {
+        scale = chroma.scale(map);
+      } else {
+        scale = chroma.scale(['#000', '#fff']);
+      }
+      return scale(clamp(t)).hex();
+    }
+    function clamp(x) { return Math.max(0, Math.min(1, x)); }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+    function lerpColor(c1, c2, t) {
+      const rgb1 = hexToRgb(c1);
+      const rgb2 = hexToRgb(c2);
+      return rgbToHex([
+        Math.round(lerp(rgb1[0], rgb2[0], t)),
+        Math.round(lerp(rgb1[1], rgb2[1], t)),
+        Math.round(lerp(rgb1[2], rgb2[2], t))
+      ]);
+    }
+    function getPalette() {
+      const colormap = document.getElementById('colormap').value;
+      if (colormap === 'custom') {
+        const c1 = document.getElementById('color1').value;
+        const c2 = document.getElementById('color2').value;
+        const c3 = document.getElementById('color3').value;
+        return [
+          c1,
+          lerpColor(c1, c2, 0.5),
+          c2,
+          lerpColor(c2, c3, 0.5),
+          c3
+        ];
+      } else {
+        // Generate 5 colors from colormap
+        return [0, 0.25, 0.5, 0.75, 1].map(t => getColormapColor(colormap, t));
+      }
+    }
+
+    function getPolygonCentroid(points) {
+      return points.reduce((sum, p) => sum + p[1], 0) / points.length;
+    }
+    function getPathCentroid(pathElem) {
+      // Try to use getBBox if available
+      if (typeof pathElem.getBBox === 'function') {
+        try {
+          const bbox = pathElem.getBBox();
+          return bbox.y + bbox.height / 2;
+        } catch (e) { }
+      }
+      // Fallback: try to parse M/m/L/l commands
+      const d = pathElem.getAttribute('d');
+      if (!d) return 0;
+      const matches = [...d.matchAll(/[MLml]\s*([\d.-]+)[, ]+([\d.-]+)/g)];
+      if (matches.length === 0) return 0;
+      const ys = matches.map(m => parseFloat(m[2]));
+      return ys.reduce((a, b) => a + b, 0) / ys.length;
+    }
+    function getPolygonCentroidXY(points) {
+      const cx = points.reduce((sum, p) => sum + p[0], 0) / points.length;
+      const cy = points.reduce((sum, p) => sum + p[1], 0) / points.length;
+      return [cx, cy];
+    }
+    function getPathCentroidXY(pathElem) {
+      if (typeof pathElem.getBBox === 'function') {
+        try {
+          const bbox = pathElem.getBBox();
+          return [bbox.x + bbox.width / 2, bbox.y + bbox.height / 2];
+        } catch (e) { }
+      }
+      const d = pathElem.getAttribute('d');
+      if (!d) return [0, 0];
+      const matches = [...d.matchAll(/[MLml]\s*([\d.-]+)[, ]+([\d.-]+)/g)];
+      if (matches.length === 0) return [0, 0];
+      const xs = matches.map(m => parseFloat(m[1]));
+      const ys = matches.map(m => parseFloat(m[2]));
+      return [
+        xs.reduce((a, b) => a + b, 0) / xs.length,
+        ys.reduce((a, b) => a + b, 0) / ys.length
+      ];
+    }
+
     function updateSVGColors() {
       if (!svgDoc) return;
-      const c1 = document.getElementById('color1').value;
-      const c2 = document.getElementById('color2').value;
-      const c3 = document.getElementById('color3').value;
-      // const palette = [
-      //   c1,
-      //   lerpColorCMYK(c1, c2, 0.5),
-      //   c2,
-      //   lerpColorCMYK(c2, c3, 0.5),
-      //   c3
-      // ];
-      const palette = [
-        c1,
-        lerpColor(c1, c2, 0.5),
-        c2,
-        lerpColor(c2, c3, 0.5),
-        c3
-      ];
-      
+      const colormap = document.getElementById('colormap').value;
+      const palette = getPalette(); // Only used for custom
       const polygons = Array.from(svgDoc.querySelectorAll('polygon'));
       const paths = Array.from(svgDoc.querySelectorAll('path'));
       const allShapes = polygons.concat(paths);
@@ -180,24 +268,33 @@
       const colorMode = document.getElementById('colorMode').value;
       let minVal = Infinity, maxVal = -Infinity;
       let cx = 0, cy = 0;
-      
+      let tx = 0, ty = 0;
       let vb = svgDoc.getAttribute('viewBox');
+      let g = svgDoc.querySelector('g');
+      if (g) {
+        let g_transform = g.getAttribute('transform');
+        if (g_transform) {
+          const match = g_transform.match(/translate\(\s*([\-\d.]+)\s*,\s*([\-\d.]+)\s*\)/);
+          if (match) {
+            tx = parseFloat(match[1]);
+            ty = parseFloat(match[2]);
+          }
+        }
+      }
       const [x, y, w, h] = vb.split(/\s+/).map(Number);
-      cx =  (w + 2*x) / 2;
-      cy = (h + 2*y) / 2;
-      
+      cx = w/2 + x;
+      cy = h/2 + y;
       if (colorMode === 'horizontal') {
         minVal = x;
-        maxVal = x+w; // Reset X to 0 for horizontal mode
+        maxVal = x+w;
       } else if (colorMode === 'vertical') {
         minVal = y;
-        maxVal = y+h; // Reset Y to 0 for vertical mode
+        maxVal = y+h;
       } else if (colorMode === 'radial') {
         minVal = 0;
         maxVal = Math.max(cx, cy);
       }
-      
-      // Assign color by chosen mode
+      const randomness = parseFloat(document.getElementById('randomness').value);
       allShapes.forEach(shape => {
         let cxy = [0, 0];
         if (shape.tagName === 'polygon') {
@@ -208,9 +305,8 @@
           cxy = getPathCentroidXY(shape);
         }
         if (shape.getAttribute('transform')) {
-          // If shape has a transform, we need to apply it to the centroid
           const transform = shape.getAttribute('transform');
-          const match = transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+          const match = transform.match(/translate\(\s*([\-\d.]+)\s*,\s*([\-\d.]+)\s*\)/);
           if (match) {
             cxy[0] += parseFloat(match[1]);
             cxy[1] += parseFloat(match[2]);
@@ -218,20 +314,28 @@
         }
         let v = 0;
         if (colorMode === 'horizontal') {
-          v = cxy[0]; // Use X coordinate for horizontal mode
-        } else
-        if (colorMode === 'vertical') {
-          v = cxy[1]; // Use Y coordinate for vertical mode
+          v = cxy[0] + tx;
+        } else if (colorMode === 'vertical') {
+          v = cxy[1] + ty;
         } else if (colorMode === 'radial') {
           v = Math.sqrt((cxy[0] - cx) ** 2 + (cxy[1] - cy) ** 2);
         }
         const t = (v - minVal) / (maxVal - minVal);
-        const idx = t * (palette.length - 1);
-        const i = Math.min(Math.floor(idx), palette.length - 1);
-        const j = Math.min(i + 1, palette.length - 1);
-        const frac = idx - i;
-        const color = Math.random() < frac ? palette[j] : palette[i];
-        const opacity = 0.5 + Math.random() * 0.5;
+        let color;
+        if (colormap === 'custom') {
+          const idx = t * (palette.length - 1);
+          const i = Math.min(Math.floor(idx), palette.length - 1);
+          const j = Math.min(i + 1, palette.length - 1);
+          const frac = idx - i;
+          const pickFrac = frac * randomness;
+          color = Math.random() < pickFrac ? palette[j] : palette[i];
+        } else {
+          // For colormap, pick color from colormap at t, with randomness controlling spread
+          let t2 = t + (Math.random() - 0.5) * randomness;
+          t2 = Math.max(0, Math.min(1, t2));
+          color = getColormapColor(colormap, t2);
+        }
+        const opacity = 1 + (Math.random() - 0.5) * randomness;
         shape.setAttribute('fill', color);
         shape.style.fill = color;
         shape.setAttribute('opacity', opacity);
@@ -240,23 +344,7 @@
     }
 
     function updatePaletteBar() {
-      const c1 = document.getElementById('color1').value;
-      const c2 = document.getElementById('color2').value;
-      const c3 = document.getElementById('color3').value;
-      // const palette = [
-      //   c1,
-      //   lerpColorCMYK(c1, c2, 0.5),
-      //   c2,
-      //   lerpColorCMYK(c2, c3, 0.5),
-      //   c3
-      // ];
-      const palette = [
-        c1,
-        lerpColor(c1, c2, 0.5),
-        c2,
-        lerpColor(c2, c3, 0.5),
-        c3
-      ];
+      const palette = getPalette();
       const bar = document.getElementById('palette-bar');
       bar.innerHTML = '';
       palette.forEach(color => {
@@ -266,6 +354,21 @@
         bar.appendChild(swatch);
       });
     }
+
+    // Dynamically populate colormap dropdown with only chroma.js brewer scales
+    function populateColormapDropdown() {
+      const dropdown = document.getElementById('colormap');
+      dropdown.innerHTML = '<option value="custom">Custom</option>';
+      const brewerScales = Object.keys(chroma.brewer);
+      brewerScales.forEach(scale => {
+        const opt = document.createElement('option');
+        opt.value = scale;
+        opt.textContent = scale.charAt(0).toUpperCase() + scale.slice(1);
+        dropdown.appendChild(opt);
+      });
+    }
+    // Call on page load
+    document.addEventListener('DOMContentLoaded', populateColormapDropdown);
 
     document.getElementById('svgFile').addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -313,6 +416,15 @@
     document.getElementById('color1').addEventListener('input', updatePaletteBar);
     document.getElementById('color2').addEventListener('input', updatePaletteBar);
     document.getElementById('color3').addEventListener('input', updatePaletteBar);
+    document.getElementById('randomness').addEventListener('input', function() {
+      document.getElementById('randomnessValue').textContent = parseFloat(this.value).toFixed(2);
+    });
+
+    // Show/hide custom color pickers based on colormap
+    document.getElementById('colormap').addEventListener('change', function() {
+      document.getElementById('customColors').style.display = this.value === 'custom' ? '' : 'none';
+      updatePaletteBar();
+    });
 
     // Initialize palette bar on page load
     updatePaletteBar();
