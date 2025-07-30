@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurable Penrose Tiling (Line Intersections)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Penrose Tiling via Parallel Lines</h1>
+  <form id="config-form">
+    <label>Lines per direction: <input type="number" id="lines" min="5" max="50" value="15"></label>
+    <label>Spacing (px): <input type="number" id="spacing" min="10" max="100" value="40"></label>
+    <label>SVG Size (px): <input type="number" id="size" min="200" max="1200" value="600"></label>
+    <button type="submit">Update</button>
+  </form>
+  <div style="display: flex; gap: 2em; align-items: flex-start;">
+    <div>
+      <h2>Lines & Intersections</h2>
+      <div id="svg-lines"></div>
+    </div>
+    <div>
+      <h2>Rhombuses</h2>
+      <div id="svg-rhombuses"></div>
+    </div>
+  </div>
+  <script src="penrose.js"></script>
+</body>
+</html>
