@@ -296,6 +296,8 @@
       }
       const randomness = parseFloat(document.getElementById('randomness').value);
       allShapes.forEach(shape => {
+        
+        if (shape.getAttribute('fill') == "rgb(255,255,255)") return;
         let cxy = [0, 0];
         if (shape.tagName === 'polygon') {
           const points = shape.getAttribute('points').trim().split(/\s+/)
