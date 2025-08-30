@@ -60,7 +60,8 @@
     </label>
     <label style="margin-left:1em;">Colormap:
       <select id="colormap">
-        <option value="custom">Custom</option>
+        <option value="custom">Custom (discrete)</option>
+        <option value="custom-smooth">Custom (smooth)</option>
         <option value="viridis">Viridis</option>
         <option value="inferno">Inferno</option>
         <option value="magma">Magma</option>
@@ -198,6 +199,7 @@
     function getPalette() {
       const colormap = document.getElementById('colormap').value;
       if (colormap === 'custom') {
+        // Discrete palette
         const c1 = document.getElementById('color1').value;
         const c2 = document.getElementById('color2').value;
         const c3 = document.getElementById('color3').value;
@@ -208,6 +210,14 @@
           lerpColor(c2, c3, 0.5),
           c3
         ];
+      } else if (colormap === 'custom-smooth') {
+        // Smooth palette: interpolate between c1, c2, c3
+        const c1 = document.getElementById('color1').value;
+        const c2 = document.getElementById('color2').value;
+        const c3 = document.getElementById('color3').value;
+        // Use chroma.js scale for smooth interpolation
+        const scale = chroma.scale([c1, c2, c3]);
+        return Array.from({length: 5}, (_, i) => scale(i/4).hex());
       } else {
         // Generate 5 colors from colormap
         return [0, 0.25, 0.5, 0.75, 1].map(t => getColormapColor(colormap, t));
@@ -256,7 +266,9 @@
         ys.reduce((a, b) => a + b, 0) / ys.length
       ];
     }
-
+	function argMin(array) {
+	  return array.map((x, i) => [x, i]).reduce((r, a) => (a[0] < r[0] ? a : r))[1];
+	}
     function updateSVGColors() {
       if (!svgDoc) return;
       const colormap = document.getElementById('colormap').value;
@@ -296,8 +308,8 @@
       }
       const randomness = parseFloat(document.getElementById('randomness').value);
       allShapes.forEach(shape => {
-        
-        if (shape.getAttribute('fill') == "rgb(255,255,255)") return;
+        let s_fill = shape.getAttribute('fill');
+        if (s_fill == "#ffffff") return;
         let cxy = [0, 0];
         if (shape.tagName === 'polygon') {
           const points = shape.getAttribute('points').trim().split(/\s+/)
@@ -320,28 +332,43 @@
         } else if (colorMode === 'vertical') {
           v = cxy[1] + ty;
         } else if (colorMode === 'radial') {
-          v = Math.sqrt((cxy[0] - cx) ** 2 + (cxy[1] - cy) ** 2);
+          v = Math.sqrt((cxy[0] + tx - cx) ** 2 + (cxy[1] + ty - cy) ** 2);
         }
         const t = (v - minVal) / (maxVal - minVal);
         let color;
         if (colormap === 'custom') {
-          const idx = t * (palette.length - 1);
-          const i = Math.min(Math.floor(idx), palette.length - 1);
-          const j = Math.min(i + 1, palette.length - 1);
-          const frac = idx - i;
+          // Discrete palette
+          const idx = t * (palette.length-1);
+          const i = Math.min(Math.round(idx), palette.length - 1);
+          const j = i + Math.pow(-1, argMin([i-idx, idx - i]));
+          const frac = Math.max(idx - i, i - idx);
           const pickFrac = frac * randomness;
           color = Math.random() < pickFrac ? palette[j] : palette[i];
+        } else if (colormap === 'custom-smooth') {
+          // Smooth interpolation using chroma.js scale
+          let t2 = t + (Math.random() - 0.5) * randomness;
+          t2 = Math.max(0, Math.min(1, t2));
+          const c1 = document.getElementById('color1').value;
+          const c2 = document.getElementById('color2').value;
+          const c3 = document.getElementById('color3').value;
+          color = chroma.scale([c1, c2, c3])(t2).hex();
         } else {
           // For colormap, pick color from colormap at t, with randomness controlling spread
           let t2 = t + (Math.random() - 0.5) * randomness;
           t2 = Math.max(0, Math.min(1, t2));
           color = getColormapColor(colormap, t2);
         }
+        // Ensure color is hex
+        //if (color.startsWith('rgb')) {
+          // Convert rgb to hex
+          //const rgb = color.match(/\d+/g).map(Number);
+          //color = rgbToHex(rgb);
+        //}
         const opacity = 1 + (Math.random() - 0.5) * randomness;
         shape.setAttribute('fill', color);
         shape.style.fill = color;
-        shape.setAttribute('opacity', opacity);
-        shape.style.opacity = opacity;
+        //shape.setAttribute('opacity', opacity);
+        //shape.style.opacity = opacity;
       });
     }
 
@@ -360,7 +387,8 @@
     // Dynamically populate colormap dropdown with only chroma.js brewer scales
     function populateColormapDropdown() {
       const dropdown = document.getElementById('colormap');
-      dropdown.innerHTML = '<option value="custom">Custom</option>';
+      dropdown.innerHTML = '<option value="custom">Custom (discrete)</option>';
+      dropdown.innerHTML += '<option value="custom-smooth">Custom (smooth)</option>';
       const brewerScales = Object.keys(chroma.brewer);
       brewerScales.forEach(scale => {
         const opt = document.createElement('option');
