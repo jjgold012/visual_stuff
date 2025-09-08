@@ -74,6 +74,17 @@
       <label>Pick color 2: <input type="color" id="color2" class="color-picker" value="#00ff00"></label>
       <label>Pick color 3: <input type="color" id="color3" class="color-picker" value="#0000ff"></label>
     </span>
+    <label style="margin-left:1em;">Layer:
+      <select id="layerChooser">
+        <option value="">All layers</option>
+      </select>
+    </label>
+    <label style="margin-left:1em;">Colormap direction:
+      <input type="radio" name="colormapDir" id="colormapNormal" value="normal" checked>
+      <label for="colormapNormal">Normal</label>
+      <input type="radio" name="colormapDir" id="colormapReverse" value="reverse">
+      <label for="colormapReverse">Reverse</label>
+    </label>
   </div>
   <div id="palette-bar"></div>
   <div id="svg-container"></div>
@@ -266,50 +277,43 @@
         ys.reduce((a, b) => a + b, 0) / ys.length
       ];
     }
-	function argMin(array) {
-	  return array.map((x, i) => [x, i]).reduce((r, a) => (a[0] < r[0] ? a : r))[1];
-	}
+  function argMin(array) {
+    return array.map((x, i) => [x, i]).reduce((r, a) => (a[0] < r[0] ? a : r))[1];
+  }
     function updateSVGColors() {
       if (!svgDoc) return;
       const colormap = document.getElementById('colormap').value;
-      const palette = getPalette(); // Only used for custom
-      const polygons = Array.from(svgDoc.querySelectorAll('polygon'));
-      const paths = Array.from(svgDoc.querySelectorAll('path'));
-      const allShapes = polygons.concat(paths);
-      if (allShapes.length === 0) return;
+      const palette = getPalette();
+      const layerIdx = document.getElementById('layerChooser') ? document.getElementById('layerChooser').value : '';
       const colorMode = document.getElementById('colorMode').value;
-      let minVal = Infinity, maxVal = -Infinity;
-      let cx = 0, cy = 0;
-      let tx = 0, ty = 0;
+      const randomness = parseFloat(document.getElementById('randomness').value);
+      const dir = document.querySelector('input[name="colormapDir"]:checked').value;
+
       let vb = svgDoc.getAttribute('viewBox');
-      let g = svgDoc.querySelector('g');
-      if (g) {
-        let g_transform = g.getAttribute('transform');
-        if (g_transform) {
-          const match = g_transform.match(/translate\(\s*([\-\d.]+)\s*,\s*([\-\d.]+)\s*\)/);
-          if (match) {
-            tx = parseFloat(match[1]);
-            ty = parseFloat(match[2]);
-          }
-        }
-      }
       const [x, y, w, h] = vb.split(/\s+/).map(Number);
-      cx = w/2 + x;
-      cy = h/2 + y;
+      const cx = w / 2 + x;
+      const cy = h / 2 + y;
+      let minVal, maxVal;
       if (colorMode === 'horizontal') {
         minVal = x;
-        maxVal = x+w;
+        maxVal = x + w;
       } else if (colorMode === 'vertical') {
         minVal = y;
-        maxVal = y+h;
+        maxVal = y + h;
       } else if (colorMode === 'radial') {
         minVal = 0;
         maxVal = Math.max(cx, cy);
       }
-      const randomness = parseFloat(document.getElementById('randomness').value);
-      allShapes.forEach(shape => {
-        let s_fill = shape.getAttribute('fill');
-        if (s_fill == "#ffffff") return;
+
+      // Use preprocessed shapes
+      const shapes = Array.from(svgDoc.querySelectorAll('polygon, path'));
+      shapes.forEach(shape => {
+        // Filter by layer if needed
+        if (layerIdx !== '' && String(shape._groupIndex) !== layerIdx) return;
+
+        // Parse group transform
+        const {tx, ty, angle, cx: rcx, cy: rcy} = parseTransform(shape._groupTransform);
+
         let cxy = [0, 0];
         if (shape.tagName === 'polygon') {
           const points = shape.getAttribute('points').trim().split(/\s+/)
@@ -318,34 +322,48 @@
         } else if (shape.tagName === 'path') {
           cxy = getPathCentroidXY(shape);
         }
+
+        // Apply translate
+        cxy[0] += tx;
+        cxy[1] += ty;
+
+        // Apply rotate (about rcx, rcy)
+        if (angle !== 0) {
+          const x0 = cxy[0] - rcx;
+          const y0 = cxy[1] - rcy;
+          const x1 = x0 * Math.cos(angle) - y0 * Math.sin(angle);
+          const y1 = x0 * Math.sin(angle) + y0 * Math.cos(angle);
+          cxy[0] = x1 + rcx;
+          cxy[1] = y1 + rcy;
+        }
+
+        // Apply shape transform if present (optional: you can extend parseTransform for shapes too)
         if (shape.getAttribute('transform')) {
-          const transform = shape.getAttribute('transform');
-          const match = transform.match(/translate\(\s*([\-\d.]+)\s*,\s*([\-\d.]+)\s*\)/);
-          if (match) {
-            cxy[0] += parseFloat(match[1]);
-            cxy[1] += parseFloat(match[2]);
+          const t = shape.getAttribute('transform').match(/translate\(\s*([\-\d.]+)\s*,\s*([\-\d.]+)\s*\)/);
+          if (t) {
+            cxy[0] += parseFloat(t[1]);
+            cxy[1] += parseFloat(t[2]);
           }
         }
         let v = 0;
         if (colorMode === 'horizontal') {
-          v = cxy[0] + tx;
+          v = cxy[0];
         } else if (colorMode === 'vertical') {
-          v = cxy[1] + ty;
+          v = cxy[1];
         } else if (colorMode === 'radial') {
-          v = Math.sqrt((cxy[0] + tx - cx) ** 2 + (cxy[1] + ty - cy) ** 2);
+          v = Math.sqrt((cxy[0] - cx) ** 2 + (cxy[1] - cy) ** 2);
         }
-        const t = (v - minVal) / (maxVal - minVal);
+        let t = (v - minVal) / (maxVal - minVal);
+        if (dir === 'reverse') t = 1 - t;
         let color;
         if (colormap === 'custom') {
-          // Discrete palette
-          const idx = t * (palette.length-1);
+          const idx = t * (palette.length - 1);
           const i = Math.min(Math.round(idx), palette.length - 1);
-          const j = i + Math.pow(-1, argMin([i-idx, idx - i]));
+          const j = i + Math.pow(-1, argMin([i - idx, idx - i]));
           const frac = Math.max(idx - i, i - idx);
           const pickFrac = frac * randomness;
           color = Math.random() < pickFrac ? palette[j] : palette[i];
         } else if (colormap === 'custom-smooth') {
-          // Smooth interpolation using chroma.js scale
           let t2 = t + (Math.random() - 0.5) * randomness;
           t2 = Math.max(0, Math.min(1, t2));
           const c1 = document.getElementById('color1').value;
@@ -353,22 +371,12 @@
           const c3 = document.getElementById('color3').value;
           color = chroma.scale([c1, c2, c3])(t2).hex();
         } else {
-          // For colormap, pick color from colormap at t, with randomness controlling spread
           let t2 = t + (Math.random() - 0.5) * randomness;
           t2 = Math.max(0, Math.min(1, t2));
           color = getColormapColor(colormap, t2);
         }
-        // Ensure color is hex
-        //if (color.startsWith('rgb')) {
-          // Convert rgb to hex
-          //const rgb = color.match(/\d+/g).map(Number);
-          //color = rgbToHex(rgb);
-        //}
-        const opacity = 1 + (Math.random() - 0.5) * randomness;
         shape.setAttribute('fill', color);
         shape.style.fill = color;
-        //shape.setAttribute('opacity', opacity);
-        //shape.style.opacity = opacity;
       });
     }
 
@@ -407,6 +415,7 @@
       reader.onload = function (ev) {
         document.getElementById('svg-container').innerHTML = ev.target.result;
         svgDoc = document.getElementById('svg-container').querySelector('svg');
+        preprocessShapes();
         // Set viewBox to fit all elements
         if (svgDoc && typeof svgDoc.getBBox === 'function') {
           try {
@@ -417,6 +426,7 @@
         document.getElementById('applyBtn').disabled = false;
         document.getElementById('downloadBtn').disabled = false;
         updatePaletteBar();
+        populateLayerChooser();
       };
       reader.readAsText(file);
     });
@@ -452,12 +462,61 @@
 
     // Show/hide custom color pickers based on colormap
     document.getElementById('colormap').addEventListener('change', function() {
-      document.getElementById('customColors').style.display = this.value === 'custom' ? '' : 'none';
+      document.getElementById('customColors').style.display = (this.value === 'custom' || this.value === 'custom-smooth') ? '' : 'none';
       updatePaletteBar();
     });
 
     // Initialize palette bar on page load
     updatePaletteBar();
+
+    function populateLayerChooser() {
+  const chooser = document.getElementById('layerChooser');
+  chooser.innerHTML = '<option value="">All layers</option>';
+  if (!svgDoc) return;
+  const groups = Array.from(svgDoc.querySelectorAll('g'));
+  groups.forEach((g, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = g.id ? g.id : `Layer ${i+1}`;
+    chooser.appendChild(opt);
+  });
+}
+
+function preprocessShapes() {
+  if (!svgDoc) return;
+  const groups = Array.from(svgDoc.querySelectorAll('g'));
+  const shapes = Array.from(svgDoc.querySelectorAll('polygon, path'));
+  shapes.forEach(shape => {
+    // Find parent group (if any)
+    let parentGroup = shape.closest('g');
+    if (parentGroup) {
+      shape._groupIndex = groups.indexOf(parentGroup);
+      shape._groupTransform = parentGroup.getAttribute('transform') || '';
+    } else {
+      shape._groupIndex = null;
+      shape._groupTransform = '';
+    }
+  });
+}
+
+function parseTransform(transform) {
+  let tx = 0, ty = 0, angle = 0, cx = 0, cy = 0;
+  if (!transform) return {tx, ty, angle, cx, cy};
+  // Translate
+  const tMatch = transform.match(/translate\(\s*([\-\d.]+)(?:[\s,]+([\-\d.]+))?\s*\)/);
+  if (tMatch) {
+    tx = parseFloat(tMatch[1]);
+    ty = tMatch[2] !== undefined ? parseFloat(tMatch[2]) : 0;
+  }
+  // Rotate
+  const rMatch = transform.match(/rotate\(\s*([\-\d.]+)(?:[\s,]+([\-\d.]+)[\s,]+([\-\d.]+))?\s*\)/);
+  if (rMatch) {
+    angle = parseFloat(rMatch[1]) * Math.PI / 180;
+    cx = rMatch[2] !== undefined ? parseFloat(rMatch[2]) : 0;
+    cy = rMatch[3] !== undefined ? parseFloat(rMatch[3]) : 0;
+  }
+  return {tx, ty, angle, cx, cy};
+}
   </script>
 </body>
 
