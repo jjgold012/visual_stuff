@@ -302,7 +302,7 @@
         maxVal = y + h;
       } else if (colorMode === 'radial') {
         minVal = 0;
-        maxVal = Math.max(cx, cy);
+        maxVal = Math.min(cx, cy);
       }
 
       // Use preprocessed shapes
@@ -310,9 +310,14 @@
       shapes.forEach(shape => {
         // Filter by layer if needed
         if (layerIdx !== '' && String(shape._groupIndex) !== layerIdx) return;
-
+        // Skip if shade of gray
+        // const fill = shape.getAttribute('fill');
+        // if (fill && fill !== 'none') {
+        //   const rgb = hexToRgb(fill);
+        //   if (rgb[0] === rgb[1] && rgb[1] === rgb[2]) return;
+        // }
         // Parse group transform
-        const {tx, ty, angle, cx: rcx, cy: rcy} = parseTransform(shape._groupTransform);
+        const {tx, ty, angle, cx: rcx, cy: rcy, matrix} = parseTransform(shape._groupTransform);
 
         let cxy = [0, 0];
         if (shape.tagName === 'polygon') {
@@ -344,6 +349,13 @@
             cxy[0] += parseFloat(t[1]);
             cxy[1] += parseFloat(t[2]);
           }
+        }
+        // Apply matrix transform if present
+        if (matrix) {
+          const m = matrix;
+          const x = cxy[0], y = cxy[1];
+          cxy[0] = m[0] * x + m[2] * y + m[4];
+          cxy[1] = m[1] * x + m[3] * y + m[5];
         }
         let v = 0;
         if (colorMode === 'horizontal') {
@@ -377,6 +389,10 @@
         }
         shape.setAttribute('fill', color);
         shape.style.fill = color;
+        // // Add random opacity between 0.5 and 1
+        // const opacity = 0.5 + Math.random() * 0.5;
+        // shape.setAttribute('opacity', opacity);
+        // shape.style.opacity = opacity;
       });
     }
 
@@ -501,7 +517,8 @@ function preprocessShapes() {
 
 function parseTransform(transform) {
   let tx = 0, ty = 0, angle = 0, cx = 0, cy = 0;
-  if (!transform) return {tx, ty, angle, cx, cy};
+  let matrix = null;
+  if (!transform) return {tx, ty, angle, cx, cy, matrix};
   // Translate
   const tMatch = transform.match(/translate\(\s*([\-\d.]+)(?:[\s,]+([\-\d.]+))?\s*\)/);
   if (tMatch) {
@@ -515,7 +532,12 @@ function parseTransform(transform) {
     cx = rMatch[2] !== undefined ? parseFloat(rMatch[2]) : 0;
     cy = rMatch[3] !== undefined ? parseFloat(rMatch[3]) : 0;
   }
-  return {tx, ty, angle, cx, cy};
+  // Matrix
+  const mMatch = transform.match(/matrix\(\s*([\d\.\-eE]+)[\s,]+([\d\.\-eE]+)[\s,]+([\d\.\-eE]+)[\s,]+([\d\.\-eE]+)[\s,]+([\d\.\-eE]+)[\s,]+([\d\.\-eE]+)\s*\)/);
+  if (mMatch) {
+    matrix = mMatch.slice(1, 7).map(Number);
+  }
+  return {tx, ty, angle, cx, cy, matrix};
 }
   </script>
 </body>
