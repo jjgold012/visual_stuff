@@ -52,17 +52,17 @@ const colmap_orig = {
 	'Psi' : [0, 255, 255] };
 
 const colmap_mystics = {
-	'Gamma' : [196, 201, 169],
-	'Gamma1' : [196, 201, 169],
-	'Gamma2' : [156, 160, 116],
-	'Delta' : [247, 252, 248],
-	'Theta' : [247, 252, 248],
-	'Lambda' : [247, 252, 248],
-	'Xi' : [247, 252, 248],
-	'Pi' : [247, 252, 248],
-	'Sigma' : [247, 252, 248],
-	'Phi' : [247, 252, 248],
-	'Psi' : [247, 252, 248] };
+	'Gamma' : [255, 255, 255],
+	'Gamma1' : [239, 239, 239],
+	'Gamma2' : [223, 223, 223],
+	'Delta' : [207, 207, 207],
+	'Theta' : [191, 191, 191],
+	'Lambda' : [175, 175, 175],
+	'Xi' : [159, 159, 159],
+	'Pi' : [143, 143, 143],
+	'Sigma' : [127, 127, 127],
+	'Phi' : [111, 111, 111],
+	'Psi' : [95, 95, 95] };
 
 const colmap_pride = {
 	'Gamma' : [255, 255, 255],
@@ -236,11 +236,11 @@ class CurvyShape
 			const v = psub( p, prev );
 			const w = pt( -v.y, v.x );
 			if( blah ) {
-				this.pts.push( pframe( prev, v, w, 0.33, 0.6 ) );
-				this.pts.push( pframe( prev, v, w, 0.67, 0.6 ) );
+				this.pts.push( pframe( prev, v, w, 0.33, -0.4 ) );
+				this.pts.push( pframe( prev, v, w, 0.67, 0.4 ) );
 			} else {
-				this.pts.push( pframe( prev, v, w, 0.33, -0.6 ) );
-				this.pts.push( pframe( prev, v, w, 0.67, -0.6 ) );
+				this.pts.push( pframe( prev, v, w, 0.33, -0.4 ) );
+				this.pts.push( pframe( prev, v, w, 0.67, 0.4 ) );
 			}
 			blah = !blah;
 			this.pts.push( p );

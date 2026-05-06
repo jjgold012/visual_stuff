@@ -32,7 +32,7 @@ def new_colormap(N=256):
     hues = np.linspace(0, 1, N, endpoint=False)
     # new_hues = tanh_blend_remap(hues, center=0.5, width=1)
 
-    colors = plt.get_cmap('gist_rainbow')(hues)
+    colors = plt.get_cmap('winter')(hues)
     colors[:, :3] *= 0.7  # Darken RGB channels
     return ListedColormap(colors, name='new_cmap')
 
@@ -166,8 +166,8 @@ def octagonize_polyline(points, frac=0.3):
     return new_points
 
 if __name__ == "__main__":
-    h = 6
-    d = 12
+    h = 3
+    d = 11
     g = 4
     # plot_remap()
     plot_hilbert_curve(h, colormap='new_cmap', save_svg=f'hilbert_curve_{h}.svg')
