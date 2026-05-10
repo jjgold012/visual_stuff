@@ -20,6 +20,14 @@ let scale_button;
 let dragging = false;
 let uibox = true;
 
+// Curve editor state
+let curveParams = { t1: 0.33, t2: 0.67, offset: 0.4, flip: true };
+let curveEditorVisible = false;
+let dragCpIndex = -1;  // -1=none, 0=first cp, 1=second cp
+let editPanelX, editPanelY, editPanelW = 340, editPanelH = 300;
+let visAreaX, visAreaY, visAreaW = 280, visAreaH = 160;
+let editInputs = {};
+
 const tile_names = [ 
 	'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi',
 	'Pi', 'Sigma', 'Phi', 'Psi' ];
@@ -223,26 +231,25 @@ class Shape
 
 class CurvyShape
 {
-	constructor( pts, quad, label )
+	constructor( pts, quad, label, params )
 	{
 		this.quad = quad;
 		this.label = label;
 
-		let blah = true;
+		const t1 = params ? params.t1 : 0.33;
+		const t2 = params ? params.t2 : 0.67;
+		const offset = params ? params.offset : 0.4;
+		const flip = params ? params.flip : true;
 
 		this.pts = [pts[pts.length-1]];
-		for( const p of pts ) {
+		for( let idx = 0; idx < pts.length; ++idx ) {
+			const p = pts[idx];
 			const prev = this.pts[this.pts.length-1];
 			const v = psub( p, prev );
 			const w = pt( -v.y, v.x );
-			if( blah ) {
-				this.pts.push( pframe( prev, v, w, 0.33, -0.4 ) );
-				this.pts.push( pframe( prev, v, w, 0.67, 0.4 ) );
-			} else {
-				this.pts.push( pframe( prev, v, w, 0.33, -0.4 ) );
-				this.pts.push( pframe( prev, v, w, 0.67, 0.4 ) );
-			}
-			blah = !blah;
+			const off = flip ? (idx % 2 === 0 ? -offset : offset) : offset;
+			this.pts.push( pframe( prev, v, w, t1, off ) );
+			this.pts.push( pframe( prev, v, w, t2, -off ) );
 			this.pts.push( p );
 		}
 	}
@@ -316,7 +323,23 @@ class Meta
 	}
 }
 
-function buildSpectreBase( curved )
+function rebuildShapes()
+{
+	const s = shape_sel.value();
+	if( s == 'Hexagons' ) {
+		sys = buildHexBase();
+	} else if( s == 'Turtles in Hats' ) {
+		sys = buildHatTurtleBase( true );
+	} else if( s == 'Hats in Turtles' ) {
+		sys = buildHatTurtleBase( false );
+	} else if( s == 'Spectres' ) {
+		sys = buildSpectreBase( true, curveParams );
+	} else {
+		sys = buildSpectreBase( false );
+	}
+}
+
+function buildSpectreBase( curved, params )
 {
 	const spectre = [
 		pt(0, 0),
@@ -344,7 +367,7 @@ function buildSpectreBase( curved )
 	for( lab of ['Delta', 'Theta', 'Lambda', 'Xi', 
 				 'Pi', 'Sigma', 'Phi', 'Psi'] ) {
 		if( curved ) {
-			ret[lab] = new CurvyShape( spectre, spectre_keys, lab );
+			ret[lab] = new CurvyShape( spectre, spectre_keys, lab, params );
 		} else {
 			ret[lab] = new Shape( spectre, spectre_keys, lab );
 		}
@@ -353,9 +376,9 @@ function buildSpectreBase( curved )
 	const mystic = new Meta();
 	if( curved ) {
 		mystic.addChild( 
-			new CurvyShape( spectre, spectre_keys, 'Gamma1' ), ident );
+			new CurvyShape( spectre, spectre_keys, 'Gamma1', params ), ident );
 		mystic.addChild( 
-			new CurvyShape( spectre, spectre_keys, 'Gamma2' ),
+			new CurvyShape( spectre, spectre_keys, 'Gamma2', params ),
 				mul( ttrans( spectre[8].x, spectre[8].y ), trot( PI / 6 ) ) );
 	} else {
 		mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma1' ), ident );
@@ -555,18 +578,7 @@ function setup() {
 	shape_sel.option( 'Turtles in Hats' );
 	shape_sel.option( 'Hats in Turtles' );
 	shape_sel.changed( function() {
-		const s = shape_sel.value();
-		if( s == 'Hexagons' ) {
-			sys = buildHexBase();
-		} else if( s == 'Turtles in Hats' ) {
-			sys = buildHatTurtleBase( true );
-		} else if( s == 'Hats in Turtles' ) {
-			sys = buildHatTurtleBase( false );
-		} else if( s == 'Spectres' ) {
-			sys = buildSpectreBase( true );
-		} else {
-			sys = buildSpectreBase( false );
-		}
+		rebuildShapes();
 		to_screen = [20, 0, 0, 0, -20, 0];
 		lw_scale = 1;
 		loop();
@@ -664,6 +676,20 @@ function setup() {
 
         saveStrings( stream, 'output', 'svg' );
     } );
+
+	let curve_but = createButton( "Edit Curves" );
+	curve_but.position( 10, 345 );
+	curve_but.size( 125, 25 );
+	curve_but.mousePressed( function() {
+		curveEditorVisible = !curveEditorVisible;
+		if( curveEditorVisible ) {
+			editPanelX = width - editPanelW - 10;
+			editPanelY = 10;
+			visAreaX = editPanelX + 30;
+			visAreaY = editPanelY + 25;
+		}
+		loop();
+	} );
 }
 
 function draw()
@@ -699,7 +725,182 @@ function draw()
 		fill( 255, 220 );
 		rect( 5, 5, 135, 335 );
 	}
+
+	// Draw curve editor panel
+	if( curveEditorVisible ) {
+		drawCurveEditor();
+	}
 	noLoop();
+}
+
+// --- Curve editor functions ---
+
+function getEditorEdgeParams()
+{
+	// Returns { cp1: {x,y}, cp2: {x,y}, lineStart: {x,y}, lineEnd: {x,y} }
+	// in screen coordinates for the editor preview
+	// Edge goes from (0,0) to (eLen,0) in local space
+	const eLen = 120;
+	const h = 80; // vertical center of vis area
+	const cx = visAreaX + visAreaW / 2;
+	const cy = visAreaY + visAreaH / 2 + h * 0.2;
+	
+	const sx = eLen / 2; // half-edge in screen pixels
+	const lineStart = { x: cx - sx, y: cy };
+	const lineEnd = { x: cx + sx, y: cy };
+
+	const t1 = curveParams.t1;
+	const t2 = curveParams.t2;
+	const offset = curveParams.offset;
+	
+	// local v = (eLen, 0), w = (0, eLen) (perpendicular)
+	// but we map: one unit in local space = sx pixels
+	// Actually the edge length is eLen pixels, so scale = eLen (local edge is 1 unit)
+	const scale = eLen;
+	const offPixels = offset * scale * 0.3; // scale down offset for visual
+	
+	// cp1: at t1 along edge, offset offPixels up
+	// cp2: at t2 along edge, offset -offPixels down
+	const cp1 = { x: lineStart.x + t1 * eLen, y: cy - offPixels };
+	const cp2 = { x: lineStart.x + t2 * eLen, y: cy + offPixels };
+
+	return { cp1, cp2, lineStart, lineEnd };
+}
+
+function drawCurveEditor()
+{
+	// Panel background
+	fill( 240, 240, 240, 230 );
+	stroke( 100 );
+	strokeWeight( 1.5 );
+	rect( editPanelX, editPanelY, editPanelW, editPanelH, 5 );
+	
+	// Title
+	fill( 0 );
+	noStroke();
+	textSize( 13 );
+	text("Bezier Curve Editor", editPanelX + 10, editPanelY + 18 );
+
+	// Visual area
+	stroke( 180 );
+	strokeWeight( 1 );
+	fill( 255, 255, 255, 200 );
+	rect( visAreaX - 5, visAreaY - 5, visAreaW + 10, visAreaH + 10, 4 );
+	
+	const params = getEditorEdgeParams();
+	
+	// Draw the base line
+	stroke( 200 );
+	strokeWeight( 1.5 );
+	line( params.lineStart.x, params.lineStart.y, params.lineEnd.x, params.lineEnd.y );
+	
+	// Draw dashed lines from cp to edge
+	stroke( 0, 150, 200, 100 );
+	strokeWeight( 1 );
+	setLineDash( [4, 4] );
+	const edgeY = visAreaY + visAreaH / 2 + visAreaH * 0.2;
+	const cp1EdgeX = params.cp1.x;
+	const cp2EdgeX = params.cp2.x;
+	line( cp1EdgeX, edgeY, params.cp1.x, params.cp1.y );
+	line( cp2EdgeX, edgeY, params.cp2.x, params.cp2.y );
+	setLineDash( [] );
+	
+	// Draw the bezier curve
+	noFill();
+	stroke( 0, 100, 200 );
+	strokeWeight( 3 );
+	beginShape();
+	vertex( params.lineStart.x, params.lineStart.y );
+	bezierVertex( params.cp1.x, params.cp1.y, params.cp2.x, params.cp2.y, params.lineEnd.x, params.lineEnd.y );
+	endShape();
+	
+	// Draw control points
+	fill( 255, 100, 100 );
+	stroke( 0 );
+	strokeWeight( 1.5 );
+	circle( params.cp1.x, params.cp1.y, 10 );
+	fill( 100, 100, 255 );
+	circle( params.cp2.x, params.cp2.y, 10 );
+	
+	// Labels
+	fill( 0 );
+	noStroke();
+	textSize( 10 );
+	text( "CP1", params.cp1.x + 10, params.cp1.y + 4 );
+	text( "CP2", params.cp2.x + 10, params.cp2.y + 4 );
+	text( "Edge", params.lineEnd.x + 6, params.lineEnd.y + 4 );
+
+	// Flip toggle button
+	const flipX = editPanelX + 10;
+	const flipY = visAreaY + visAreaH + 20;
+	stroke( 100 );
+	strokeWeight( 1 );
+	fill( curveParams.flip ? 200 : 255 );
+	rect( flipX, flipY, 60, 22, 3 );
+	fill( 0 );
+	noStroke();
+	textSize( 11 );
+	text( (curveParams.flip ? "Flip: ON" : "Flip: OFF"), flipX + 8, flipY + 15 );
+
+	// Reset button
+	const resetX = editPanelX + editPanelW - 70;
+	stroke( 100 );
+	strokeWeight( 1 );
+	fill( 255, 200, 200 );
+	rect( resetX, flipY, 60, 22, 3 );
+	fill( 0 );
+	noStroke();
+	text( "Reset", resetX + 15, flipY + 15 );
+}
+
+function setLineDash( pattern )
+{
+	drawingContext.setLineDash( pattern );
+}
+
+function curveEditorHitTest()
+{
+	if( !curveEditorVisible ) return -1;
+	const params = getEditorEdgeParams();
+	const mx = mouseX;
+	const my = mouseY;
+	const hitRadius = 8;
+	if( dist( mx, my, params.cp1.x, params.cp1.y ) < hitRadius ) {
+		return 0;
+	}
+	if( dist( mx, my, params.cp2.x, params.cp2.y ) < hitRadius ) {
+		return 1;
+	}
+	return -1;
+}
+
+function handleCurveEditorMouse()
+{
+	// Check flip toggle
+	const flipX = editPanelX + 10;
+	const flipY = visAreaY + visAreaH + 20;
+	const mx = mouseX;
+	const my = mouseY;
+	if( mx > flipX && mx < flipX + 60 && my > flipY && my < flipY + 22 ) {
+		curveParams.flip = !curveParams.flip;
+		rebuildShapes();
+		loop();
+		return true;
+	}
+	
+	// Check reset button
+	const resetX = editPanelX + editPanelW - 70;
+	if( mx > resetX && mx < resetX + 60 && my > flipY && my < flipY + 22 ) {
+		curveParams.t1 = 0.33;
+		curveParams.t2 = 0.67;
+		curveParams.offset = 0.4;
+		curveParams.flip = true;
+		rebuildShapes();
+		loop();
+		return true;
+	}
+	
+	return false;
 }
 
 function windowResized() 
@@ -710,6 +911,19 @@ function windowResized()
 function mousePressed()
 {
 	dragging = true;
+	
+	// Check curve editor first
+	if( curveEditorVisible ) {
+		dragCpIndex = curveEditorHitTest();
+		if( dragCpIndex >= 0 ) {
+			loop();
+			return;
+		}
+		if( handleCurveEditorMouse() ) {
+			return;
+		}
+	}
+	
 	if( isButtonActive( scale_button ) ) {
 		scale_centre = transPt( inv( to_screen ), pt( width/2, height/2 ) );
 		scale_start = pt( mouseX, mouseY );
@@ -721,6 +935,47 @@ function mousePressed()
 function mouseDragged()
 {
 	if( dragging ) {
+		// Handle curve editor control point dragging
+		if( curveEditorVisible && dragCpIndex >= 0 ) {
+			const params = getEditorEdgeParams();
+			const eLen = 120;
+			const cy = visAreaY + visAreaH / 2 + visAreaH * 0.2;
+			const cx = visAreaX + visAreaW / 2;
+			const sx = eLen / 2;
+			const edgeY = cy;
+			const relX = mouseX - (cx - sx);
+			const relY = mouseY - edgeY;
+			
+			// Clamp t between 0 and 1
+			const t = constrain( relX / eLen, 0.01, 0.99 );
+			
+			if( dragCpIndex === 0 ) {
+				curveParams.t1 = t;
+				// offset from perpendicular distance
+				curveParams.offset = abs( relY ) / (eLen * 0.3);
+			} else {
+				curveParams.t2 = t;
+				// offset from perpendicular distance  
+				curveParams.offset = abs( relY ) / (eLen * 0.3);
+			}
+			
+			// Ensure t1 < t2
+			if( curveParams.t1 >= curveParams.t2 ) {
+				if( dragCpIndex === 0 ) {
+					curveParams.t1 = curveParams.t2 - 0.01;
+				} else {
+					curveParams.t2 = curveParams.t1 + 0.01;
+				}
+			}
+			
+			// Clamp offset
+			curveParams.offset = constrain( curveParams.offset, 0.05, 1.5 );
+			
+			rebuildShapes();
+			loop();
+			return false;
+		}
+		
 		if( isButtonActive( translate_button ) ) {
 			to_screen = mul( ttrans( mouseX - pmouseX, mouseY - pmouseY ), 
 				to_screen );
@@ -742,6 +997,7 @@ function mouseDragged()
 function mouseReleased()
 {
 	dragging = false;
+	dragCpIndex = -1;
 	loop();
 }
 
