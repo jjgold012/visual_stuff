@@ -21,7 +21,7 @@ let dragging = false;
 let uibox = true;
 
 // Curve editor state
-let curveParams = { t1: 0.33, t2: 0.67, offset1: 0.4, offset2: 0.3};
+let curveParams = { t1: 0.33, t2: 0.67, offset1: 0.4, offset2: -0.3};
 let curveEditorVisible = false;
 let dragCpIndex = -1;  // -1=none, 0=first cp, 1=second cp
 let editPanelX, editPanelY, editPanelW = 340, editPanelH = 300;
@@ -239,7 +239,7 @@ class CurvyShape
 		const t1 = params ? params.t1 : 0.33;
 		const t2 = params ? params.t2 : 0.67;
 		const offset1 = params ? params.offset1 : 0.4;
-		const offset2 = params ? params.offset2 : 0.3;
+		const offset2 = params ? params.offset2 : -0.3;
 		this.pts = [pts[pts.length-1]];
 		for( let idx = 0; idx < pts.length; ++idx ) {
 			const p = pts[idx];
@@ -880,7 +880,7 @@ function handleCurveEditorMouse()
 		curveParams.t1 = 0.33;
 		curveParams.t2 = 0.67;
 		curveParams.offset1 = 0.4;
-		curveParams.offset2 = 0.3;
+		curveParams.offset2 = -0.3;
 		rebuildShapes();
 		loop();
 		return true;
