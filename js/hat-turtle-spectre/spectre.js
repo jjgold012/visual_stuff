@@ -249,12 +249,11 @@ class CurvyShape
 			if( idx % 2 == 0 ) {
 				this.pts.push( pframe( prev, v, w, t1, offset1 ) );
 				this.pts.push( pframe( prev, v, w, t2, offset2 ) );
-				this.pts.push( p );
 			} else {
 				this.pts.push( pframe( prev, v, w, 1-t2, -offset2 ) );
 				this.pts.push( pframe( prev, v, w, 1-t1, -offset1 ) );
-				this.pts.push( p );
 			}
+			this.pts.push( p );
 		}
 	}
 
