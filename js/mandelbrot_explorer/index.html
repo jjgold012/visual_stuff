@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mandelbrot Explorer</title>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="controls">
+    <div class="panel">
+      <h2>Mandelbrot Explorer</h2>
+
+      <div class="section">
+        <label>Color Palette</label>
+        <div id="palette-buttons" class="palette-grid">
+          <button class="palette-btn active" data-palette="0" title="Classic Blue">
+            <span class="swatch swatch-classic"></span> Classic
+          </button>
+          <button class="palette-btn" data-palette="1" title="Fire">
+            <span class="swatch swatch-fire"></span> Fire
+          </button>
+          <button class="palette-btn" data-palette="2" title="Rainbow">
+            <span class="swatch swatch-rainbow"></span> Rainbow
+          </button>
+          <button class="palette-btn" data-palette="3" title="Neon">
+            <span class="swatch swatch-neon"></span> Neon
+          </button>
+          <button class="palette-btn" data-palette="4" title="Ocean">
+            <span class="swatch swatch-ocean"></span> Ocean
+          </button>
+          <button class="palette-btn" data-palette="5" title="Grayscale">
+            <span class="swatch swatch-gray"></span> Grayscale
+          </button>
+          <button class="palette-btn" data-palette="6" title="Pastel">
+            <span class="swatch swatch-pastel"></span> Pastel
+          </button>
+          <button class="palette-btn" data-palette="7" title="Custom">
+            <span class="swatch swatch-custom"></span> Custom
+          </button>
+        </div>
+      </div>
+
+      <div id="custom-colors" class="section hidden">
+        <label>Custom Colors</label>
+        <div class="color-row">
+          <input type="color" id="color1" value="#ff0000" />
+          <input type="color" id="color2" value="#00ff00" />
+          <input type="color" id="color3" value="#0000ff" />
+        </div>
+      </div>
+
+      <div class="section">
+        <label>
+          Max Iterations
+          <span id="iter-value">100</span>
+        </label>
+        <input type="range" id="iter-slider" min="20" max="1000" value="100" step="1" />
+      </div>
+
+      <div class="section info">
+        <div><span class="info-label">Center:</span> <span id="info-center">-0.5 + 0.0i</span></div>
+        <div><span class="info-label">Zoom:</span> <span id="info-zoom">1.0</span></div>
+      </div>
+
+      <button id="reset-btn" class="reset-btn">Reset View</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
