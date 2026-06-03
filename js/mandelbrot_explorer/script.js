@@ -9,6 +9,7 @@
     customColor1: [1.0, 0.0, 0.0],
     customColor2: [0.0, 1.0, 0.0],
     customColor3: [0.0, 0.0, 1.0],
+    smooth: true,
     juliaC: { x: -0.7, y: 0.27 },
     juliaLocked: false,
     jCenter: { x: 0.0, y: 0.0 },
@@ -50,6 +51,7 @@ uniform vec3  u_custom2;
 uniform vec3  u_custom3;
 uniform float u_color_gamma;
 uniform vec2  u_julia_c;
+uniform int   u_smooth;
 
 out vec4 fragColor;
 
@@ -63,6 +65,9 @@ float iter_count(vec2 c, vec2 z0) {
         if (dot(z, z) > 256.0) break;
     }
     if (i == u_max_iter) return 1.0;
+    if (u_smooth == 0) {
+        return float(i) / float(u_max_iter);
+    }
     float lz = log(dot(z, z)) / 2.0;
     float nu = log(lz / log(2.0)) / log(2.0);
     return (float(i) + 1.0 - nu) / float(u_max_iter);
@@ -167,7 +172,7 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }`;
     uni = {};
     const names = ['u_m_center','u_m_scale','u_j_center','u_j_scale',
                    'u_resolution','u_max_iter','u_palette',
-                   'u_custom1','u_custom2','u_custom3','u_color_gamma','u_julia_c'];
+                   'u_custom1','u_custom2','u_custom3','u_color_gamma','u_julia_c','u_smooth'];
     for (const n of names) uni[n] = gl.getUniformLocation(prog, n);
 
     const verts = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
@@ -213,6 +218,7 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }`;
     gl.uniform3fv(uni.u_custom3, state.customColor3);
     gl.uniform1f(uni.u_color_gamma, gamma);
     gl.uniform2f(uni.u_julia_c, state.juliaC.x, state.juliaC.y);
+    gl.uniform1i(uni.u_smooth, state.smooth ? 1 : 0);
 
     gl.bindVertexArray(vao);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -374,6 +380,7 @@ uniform vec3  u_custom3;
 uniform float u_color_gamma;
 uniform vec2  u_julia_c;
 uniform int   u_export_mode;  // 0=Mandelbrot, 1=Julia
+uniform int   u_smooth;
 out vec4 fragColor;
 
 float iter_count(vec2 c, vec2 z0) {
@@ -386,6 +393,9 @@ float iter_count(vec2 c, vec2 z0) {
         if (dot(z, z) > 256.0) break;
     }
     if (i == u_max_iter) return 1.0;
+    if (u_smooth == 0) {
+        return float(i) / float(u_max_iter);
+    }
     float lz = log(dot(z, z)) / 2.0;
     float nu = log(lz / log(2.0)) / log(2.0);
     return (float(i) + 1.0 - nu) / float(u_max_iter);
@@ -495,6 +505,7 @@ void main() {
     g.uniform1f(u('u_color_gamma'), gamma);
     g.uniform2f(u('u_julia_c'), state.juliaC.x, state.juliaC.y);
     g.uniform1i(u('u_export_mode'), mode);
+    g.uniform1i(u('u_smooth'), state.smooth ? 1 : 0);
     g.bindVertexArray(vao);
     g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
 
@@ -560,6 +571,11 @@ void main() {
   color3Input.addEventListener('input', () => {
     state.customColor3 = hex2rgb(color3Input.value);
     if (state.palette === 7) render();
+  });
+
+  $('smooth-toggle').addEventListener('change', () => {
+    state.smooth = $('smooth-toggle').checked;
+    render();
   });
 
   resetBtn.addEventListener('click', () => {
