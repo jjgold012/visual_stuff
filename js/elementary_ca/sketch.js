@@ -111,15 +111,30 @@ function setup() {
 
   // --- Event Listeners ---
 
-  document.getElementById('ruleSlider').addEventListener('input', function () {
-    document.getElementById('ruleValue').textContent = this.value;
-    ruleNumber = parseInt(this.value);
-    document.getElementById('ruleDisplay').textContent = ruleNumber;
-    ruleTable = getRuleTable(ruleNumber);
+  function setRule(val) {
+    const v = Math.max(0, Math.min(255, parseInt(val) || 0));
+    document.getElementById('ruleSlider').value = v;
+    document.getElementById('ruleInput').value = v;
+    document.getElementById('ruleDisplay').textContent = v;
+    ruleNumber = v;
+    ruleTable = getRuleTable(v);
     if (!running) {
       resetGrid();
       drawGrid();
     }
+  }
+
+  document.getElementById('ruleSlider').addEventListener('input', function () {
+    setRule(this.value);
+  });
+
+  document.getElementById('ruleInput').addEventListener('input', function () {
+    setRule(this.value);
+  });
+
+  document.getElementById('ruleInput').addEventListener('change', function () {
+    // Clamp value on final commit
+    setRule(this.value);
   });
 
   document.getElementById('randomStart').addEventListener('change', function () {
