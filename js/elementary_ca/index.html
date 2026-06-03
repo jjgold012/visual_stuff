@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elementary Cellular Automaton</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="libraries/p5.min.js"></script>
+  <script src="sketch.js"></script>
+</head>
+<body>
+  <div id="container">
+    <div id="controls">
+      <h1>Elementary Cellular Automaton</h1>
+      <div class="control-row">
+        <div class="control-group">
+          <label for="ruleSlider">Rule <span id="ruleValue">150</span></label>
+          <input type="range" id="ruleSlider" min="0" max="255" value="150">
+        </div>
+        <div class="control-group">
+          <label for="randomStart">
+            <input type="checkbox" id="randomStart"> Random start
+          </label>
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <label for="widthInput">Width:</label>
+          <input type="number" id="widthInput" min="200" max="3000" value="800" class="dim-input">
+        </div>
+        <div class="control-group">
+          <label for="heightInput">Height:</label>
+          <input type="number" id="heightInput" min="200" max="3000" value="600" class="dim-input">
+        </div>
+        <div class="control-group">
+          <label for="cellSizeInput">Cell size:</label>
+          <input type="number" id="cellSizeInput" min="1" max="20" value="2" class="dim-input">
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group">
+          <label for="speedSlider">Speed: <span id="speedValue">10</span> FPS</label>
+          <input type="range" id="speedSlider" min="1" max="120" value="10">
+        </div>
+      </div>
+      <div class="button-group">
+        <button id="generateBtn">⟳ Generate</button>
+        <button id="runBtn">▶ Run</button>
+        <button id="resetBtn">Reset</button>
+        <button id="saveBtn">💾 Save PNG</button>
+      </div>
+    </div>
+    <div id="canvas-container"></div>
+    <div id="info">
+      <p>Rule <span id="ruleDisplay">150</span> — <span id="stepsDisplay">0</span> generations — <span id="dimDisplay">800×600</span></p>
+    </div>
+  </div>
+</body>
+</html>
