@@ -39,10 +39,13 @@ function resetGrid() {
   const w = parseInt(document.getElementById('widthInput').value);
   const h = parseInt(document.getElementById('heightInput').value);
 
-  cells = Math.floor(w / CELL_SIZE);
-  steps = Math.floor(h / CELL_SIZE);
-  canvasWidth = cells * CELL_SIZE;
-  canvasHeight = steps * CELL_SIZE;
+  // Number of cells needed to cover the requested canvas dimensions.
+  // Round up so the grid fully spans width/height; canvas clips any overhang,
+  // keeping the displayed/exported dimensions exactly equal to the input.
+  cells = Math.ceil(w / CELL_SIZE);
+  steps = Math.ceil(h / CELL_SIZE);
+  canvasWidth = w;
+  canvasHeight = h;
 
   grid = new Array(steps);
   for (let t = 0; t < steps; t++) {
