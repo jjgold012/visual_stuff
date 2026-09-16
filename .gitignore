@@ -1,3 +1,6 @@
 **/**/.venv/*
 **/**/.vscode/*
-py/hilbert/poetry.lock
+**/**/__pycache__/
+**/**/*.pyc
+**/**/*.egg-info/
+py/fractal_curves/poetry.lock

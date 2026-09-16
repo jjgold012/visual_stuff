@@ -1,0 +1,17 @@
+[project]
+name = "fractal-curves"
+version = "0.1.0"
+description = "Fractal curves generated with L-systems"
+authors = [{ name = "BenG", email = "j.j.goldberger@gmail.com" }]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.3",
+    "numpy>=2.0.0",
+]
+
+[tool.setuptools]
+py-modules = ["plot_some_curves"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

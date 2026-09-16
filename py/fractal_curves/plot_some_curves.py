@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -81,69 +83,124 @@ def plot_curve(points, colormap='hsv', save_svg=None, linewidth=2, color=None):
         plt.savefig(save_svg, format='svg', transparent=True)
     plt.show()
 
-def lsystem_points(axiom, rules, n, angle_deg, step=1.0, start_pos=(0,0), start_angle=0, draw_symbols='F'):
+def lsystem_points(axiom, rules, n, angle_deg, step=1.0, shrink=None,
+                   start_pos=(0, 0), start_angle=0, draw_symbols='F'):
     """
     General L-system interpreter for 2D curves.
+
+    Symbol syntax:
+        draw symbols (draw_symbols): move the pen forward, recording points
+        f                           : move forward without recording
+        + / -                       : turn right / left by angle_deg
+        |                           : turn 180 degrees
+        [ / ]                       : push / pop (pos, angle) onto a stack
+
     axiom: initial string
     rules: dict of replacement rules
     n: number of iterations
     angle_deg: turning angle in degrees
     step: step size for each drawing symbol
+    shrink: if given, the step size is divided by shrink**n so the curve
+            converges into a fixed bounding box as n grows (used by
+            self-similar space-filling curves like Hilbert and Moore).
+            Ignored if None.
     start_pos: starting (x, y) position
     start_angle: starting angle in degrees
-    draw_symbols: string of symbols that should move the pen (default 'F')
+    draw_symbols: iterable of symbols that move the pen (default 'F')
     Returns: list of (x, y) points
     """
-    # Generate the L-system string
+    draw_symbols = set(draw_symbols)
     seq = axiom
     for _ in range(n):
         seq = ''.join(rules.get(c, c) for c in seq)
-    # Interpret the string
+    step_size = step / (shrink ** n) if shrink else step
     pos = np.array(start_pos, dtype=float)
     angle = np.radians(start_angle)
     points = [tuple(pos)]
     stack = []
     for c in seq:
         if c in draw_symbols:
-            pos += step * np.array([np.cos(angle), np.sin(angle)])
+            pos = pos + step_size * np.array([np.cos(angle), np.sin(angle)])
             points.append(tuple(pos))
+        elif c == 'f':
+            pos = pos + step_size * np.array([np.cos(angle), np.sin(angle)])
         elif c == '+':
             angle += np.radians(angle_deg)
         elif c == '-':
             angle -= np.radians(angle_deg)
+        elif c == '|':
+            angle += np.pi
         elif c == '[':
             stack.append((pos.copy(), angle))
         elif c == ']':
             pos, angle = stack.pop()
     return points
 
+def density_linewidth(points, width=80.0):
+    """Line width that thins as the curve densifies: width / sqrt(segments).
+
+    With the default width, a ~1024-segment curve gets a stroke of ~2.5.
+    """
+    segments = max(1, len(points) - 1)
+    return width / math.sqrt(segments)
+
+
 def hilbert_curve_points_lsys(n):
     axiom = 'A'
     rules = {'A': '+BF-AFA-FB+', 'B': '-AF+BFB+FA-'}
-    return lsystem_points(axiom, rules, n, angle_deg=90, step=1.0/(2**n-1), start_pos=(0,0), start_angle=0, draw_symbols='F')
+    return lsystem_points(axiom, rules, n, angle_deg=90, shrink=2)
 
 def gosper_curve_points_lsys(n):
     axiom = 'A'
     rules = {'A': 'A+B++B-A--AA-B+', 'B': '-A+BB++B+A--A-B'}
-    return lsystem_points(axiom, rules, n, angle_deg=60, step=1.0, start_pos=(0,0), start_angle=0, draw_symbols=['A', 'B'])
+    return lsystem_points(axiom, rules, n, angle_deg=60, draw_symbols=['A', 'B'])
 
 def dragon_curve_points_lsys(n):
     axiom = 'FX'
     rules = {'X': 'X+YF+', 'Y': '-FX-Y'}
-    return lsystem_points(axiom, rules, n, angle_deg=90, step=1.0, start_pos=(0,0), start_angle=0, draw_symbols='F')
+    return lsystem_points(axiom, rules, n, angle_deg=90, draw_symbols='F')
+
+def sierpinski_arrowhead_points_lsys(n):
+    axiom = 'A'
+    rules = {'A': 'B-A-B', 'B': 'A+B+A'}
+    return lsystem_points(axiom, rules, n, angle_deg=60, draw_symbols=['A', 'B'])
+
+def levy_c_curve_points_lsys(n):
+    axiom = 'F'
+    rules = {'F': '+F--F+'}
+    return lsystem_points(axiom, rules, n, angle_deg=45, draw_symbols='F')
+
+def moore_curve_points_lsys(n):
+    axiom = 'LFL+F+LFL'
+    rules = {'L': '-RF+LFL+FR-', 'R': '+LF-RFR-FL+'}
+    points = lsystem_points(axiom, rules, n, angle_deg=90, shrink=2, draw_symbols='F')
+    points.append(points[0])
+    return points
 
 def plot_hilbert_curve(n, colormap='hsv', save_svg=None):
     points = hilbert_curve_points_lsys(n)
-    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=(8-n)**2)
+    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
 
 def plot_dragon_curve(n, colormap='hsv', save_svg=None):
     points = dragon_curve_points_lsys(n)
     round_points = octagonize_polyline(points, 0.3)
-    plot_curve(round_points, colormap=colormap, save_svg=save_svg, linewidth=1)
+    plot_curve(round_points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(round_points))
 
 def plot_gosper_curve(n, colormap='hsv', save_svg=None):
     points = gosper_curve_points_lsys(n)
-    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=(6-n)**2)
+    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
+
+def plot_sierpinski_arrowhead(n, colormap='hsv', save_svg=None):
+    points = sierpinski_arrowhead_points_lsys(n)
+    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
+
+def plot_levy_c_curve(n, colormap='hsv', save_svg=None):
+    points = levy_c_curve_points_lsys(n)
+    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
+
+def plot_moore_curve(n, colormap='hsv', save_svg=None):
+    points = moore_curve_points_lsys(n)
+    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
 
 
 def octagonize_polyline(points, frac=0.3):
@@ -166,10 +223,16 @@ def octagonize_polyline(points, frac=0.3):
     return new_points
 
 if __name__ == "__main__":
-    h = 3
-    d = 11
+    h = 5
     g = 4
+    s = 5
+    d = 11
+    l = 13
+    m = 5
     # plot_remap()
     plot_hilbert_curve(h, colormap='new_cmap', save_svg=f'hilbert_curve_{h}.svg')
     plot_dragon_curve(d, colormap='new_cmap', save_svg=f'dragon_curve_{d}.svg')
     plot_gosper_curve(g, colormap='cyclic_rainbow', save_svg=f'gosper_curve_{g}.svg')
+    plot_sierpinski_arrowhead(s, colormap='cyclic_rainbow', save_svg=f'sierpinski_arrowhead_{s}.svg')
+    plot_levy_c_curve(l, colormap='new_cmap', save_svg=f'levy_c_curve_{l}.svg')
+    plot_moore_curve(m, colormap='new_cmap', save_svg=f'moore_curve_{m}.svg')
