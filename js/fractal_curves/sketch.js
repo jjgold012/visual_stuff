@@ -156,17 +156,36 @@ function resolveStops(key) {
   return chroma.brewer[key];
 }
 
+function cmapOption(value, label) {
+  const opt = document.createElement('option');
+  opt.value = value;
+  opt.textContent = label || value;
+  return opt;
+}
+
+function selectHasValue(select, value) {
+  const opts = select.querySelectorAll('option');
+  for (const o of opts) {
+    if (o.value === value) return true;
+  }
+  return false;
+}
+
 function populateCmapSelect() {
   const select = el('cmapSelect');
+  const prev = select.value;
+  select.innerHTML = '';
+  select.appendChild(cmapOption('custom', 'Custom\u2026'));
+  for (const key of Object.keys(CMAPS)) {
+    select.appendChild(cmapOption(key, CMAPS[key].label));
+  }
   const group = document.createElement('optgroup');
   group.label = 'ColorBrewer';
   for (const key of Object.keys(chroma.brewer).sort()) {
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = key;
-    group.appendChild(opt);
+    group.appendChild(cmapOption(key));
   }
   select.appendChild(group);
+  select.value = selectHasValue(select, prev) ? prev : 'rainbow';
 }
 
 function buildSegmentColors(n) {
