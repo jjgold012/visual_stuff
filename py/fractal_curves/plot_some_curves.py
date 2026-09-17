@@ -225,7 +225,7 @@ def octagonize_polyline(points, frac=0.3):
 if __name__ == "__main__":
     h = 5
     g = 4
-    s = 5
+    s = 7
     d = 11
     l = 13
     m = 5

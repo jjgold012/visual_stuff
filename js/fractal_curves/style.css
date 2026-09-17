@@ -1,0 +1,182 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 960px;
+}
+
+#controls {
+  background: #16213e;
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#controls h1 {
+  font-size: 1.4rem;
+  color: #e94560;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.control-row[hidden] {
+  display: none;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-group label {
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+select {
+  padding: 5px 10px;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+#customStops {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stop input[type="color"] {
+  width: 42px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  background: #1a1a2e;
+  cursor: pointer;
+}
+
+button.mini {
+  padding: 2px 9px;
+  font-size: 0.9rem;
+  background: #c73650;
+}
+
+button.mini:hover {
+  background: #e94560;
+}
+
+input[type="range"] {
+  width: 140px;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+
+.value-label {
+  min-width: 34px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.info-label {
+  font-size: 0.9rem;
+  color: #aaa;
+  align-self: center;
+}
+
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+button {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #2d6a4f;
+  color: #fff;
+}
+
+button:hover {
+  background: #40916c;
+  transform: scale(1.03);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+#canvas-container {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  background: #000;
+  width: 100%;
+}
+
+#canvas-container canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}

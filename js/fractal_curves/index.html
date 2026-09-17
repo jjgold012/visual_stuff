@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Fractal Curves</title>
+
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <script src="libraries/p5.min.js"></script>
+    <script src="libraries/chroma.min.js"></script>
+  </head>
+
+  <body>
+    <div id="container">
+      <div id="controls">
+        <h1>Fractal Curves</h1>
+
+        <div class="control-row">
+          <div class="control-group">
+            <label for="curveSelect">Curve</label>
+            <select id="curveSelect">
+              <option value="hilbert">Hilbert</option>
+              <option value="moore">Moore</option>
+              <option value="dragon">Dragon</option>
+              <option value="gosper">Gosper</option>
+              <option value="sierpinski">Sierpiński arrowhead</option>
+              <option value="levy">Lévy C</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="iterSlider">Iterations</label>
+            <input type="range" id="iterSlider" min="1" max="6" step="1" value="5">
+            <span id="iterValue" class="value-label">5</span>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-group">
+            <label for="cmapSelect">Colormap</label>
+            <select id="cmapSelect">
+              <option value="custom">Custom…</option>
+              <option value="rainbow" selected>Rainbow</option>
+              <option value="viridis">Viridis</option>
+              <option value="plasma">Plasma</option>
+              <option value="magma">Magma</option>
+              <option value="inferno">Inferno</option>
+              <option value="grayscale">Grayscale</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="lwSlider">Line width</label>
+            <input type="range" id="lwSlider" min="0.5" max="12" step="0.1" value="2">
+            <span id="lwValue" class="value-label">2.0</span>
+            <label class="check-label"><input type="checkbox" id="autoWidth" checked>Auto</label>
+          </div>
+
+          <div class="control-group">
+            <label class="check-label"><input type="checkbox" id="smoothCheck">Smooth corners</label>
+          </div>
+        </div>
+
+        <div class="control-row" id="customRow" hidden>
+          <div class="control-group">
+            <label>Custom colors</label>
+            <span id="customStops"></span>
+            <button type="button" id="addStopBtn" class="mini" title="Add color">+</button>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button id="exportBtn">Export SVG</button>
+          <span id="segInfo" class="info-label"></span>
+        </div>
+      </div>
+
+      <div id="canvas-container"></div>
+    </div>
+
+    <script src="sketch.js"></script>
+  </body>
+</html>
