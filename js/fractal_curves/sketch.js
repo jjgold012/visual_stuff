@@ -42,6 +42,10 @@ const CMAPS = {
     label: 'Rainbow',
     stops: ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ff0000'],
   },
+  rainbow2: {
+    label: 'Rainbow2',
+    stops: ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff'],
+  },
   viridis: {
     label: 'Viridis',
     stops: ['#440154', '#482878', '#3e4a89', '#31688e', '#26828e', '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725'],
