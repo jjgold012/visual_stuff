@@ -165,6 +165,11 @@ def sierpinski_arrowhead_points_lsys(n):
     rules = {'A': 'B-A-B', 'B': 'A+B+A'}
     return lsystem_points(axiom, rules, n, angle_deg=60, draw_symbols=['A', 'B'])
 
+def sierpinski_triangle_points_lsys(n):
+    axiom = 'F-G-G'
+    rules = {'F': 'F-G+F+G-F', 'G': 'GG'}
+    return lsystem_points(axiom, rules, n, angle_deg=120, draw_symbols='FG')
+
 def levy_c_curve_points_lsys(n):
     axiom = 'F'
     rules = {'F': '+F--F+'}
@@ -192,6 +197,10 @@ def plot_gosper_curve(n, colormap='hsv', save_svg=None):
 
 def plot_sierpinski_arrowhead(n, colormap='hsv', save_svg=None):
     points = sierpinski_arrowhead_points_lsys(n)
+    plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
+
+def plot_sierpinski_triangle(n, colormap='hsv', save_svg=None):
+    points = sierpinski_triangle_points_lsys(n)
     plot_curve(points, colormap=colormap, save_svg=save_svg, linewidth=density_linewidth(points))
 
 def plot_levy_c_curve(n, colormap='hsv', save_svg=None):
@@ -229,10 +238,12 @@ if __name__ == "__main__":
     d = 11
     l = 13
     m = 5
+    t = 6
     # plot_remap()
     plot_hilbert_curve(h, colormap='new_cmap', save_svg=f'hilbert_curve_{h}.svg')
     plot_dragon_curve(d, colormap='new_cmap', save_svg=f'dragon_curve_{d}.svg')
     plot_gosper_curve(g, colormap='cyclic_rainbow', save_svg=f'gosper_curve_{g}.svg')
     plot_sierpinski_arrowhead(s, colormap='cyclic_rainbow', save_svg=f'sierpinski_arrowhead_{s}.svg')
+    plot_sierpinski_triangle(t, colormap='cyclic_rainbow', save_svg=f'sierpinski_triangle_{t}.svg')
     plot_levy_c_curve(l, colormap='new_cmap', save_svg=f'levy_c_curve_{l}.svg')
     plot_moore_curve(m, colormap='new_cmap', save_svg=f'moore_curve_{m}.svg')

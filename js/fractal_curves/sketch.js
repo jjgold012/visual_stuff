@@ -3,37 +3,43 @@ const CURVES = {
     key: 'hilbert', label: 'Hilbert',
     axiom: 'A',
     rules: { A: '+BF-AFA-FB+', B: '-AF+BFB+FA-' },
-    angle: 90, draw: 'F', shrink: 2, max: 15, default: 5,
+    angle: 90, draw: 'F', shrink: 2, max: 15,
   },
   moore: {
     key: 'moore', label: 'Moore',
     axiom: 'LFL+F+LFL',
     rules: { L: '-RF+LFL+FR-', R: '+LF-RFR-FL+' },
-    angle: 90, draw: 'F', shrink: 2, max: 15, default: 5, closed: false,
+    angle: 90, draw: 'F', shrink: 2, max: 15, closed: false,
   },
   dragon: {
     key: 'dragon', label: 'Dragon',
     axiom: 'FX',
     rules: { X: 'X+YF+', Y: '-FX-Y' },
-    angle: 90, draw: 'F', max: 15, default: 5,
+    angle: 90, draw: 'F', max: 15,
   },
   gosper: {
     key: 'gosper', label: 'Gosper',
     axiom: 'A',
     rules: { A: 'A+B++B-A--AA-B+', B: '-A+BB++B+A--A-B' },
-    angle: 60, draw: 'AB', max: 15, default: 5,
+    angle: 60, draw: 'AB', max: 15,
   },
   sierpinski: {
     key: 'sierpinski', label: 'Sierpinski arrowhead',
     axiom: 'A',
     rules: { A: 'B-A-B', B: 'A+B+A' },
-    angle: 60, draw: 'AB', max: 15, default: 5,
+    angle: 60, draw: 'AB', max: 15,
+  },
+  sierpinski_triangle: {
+    key: 'sierpinski_triangle', label: 'Sierpinski triangle',
+    axiom: 'F-G-G',
+    rules: { F: 'F-G+F+G-F', G: 'GG' },
+    angle: 120, draw: 'FG', max: 8,
   },
   levy: {
     key: 'levy', label: 'Levy C',
     axiom: 'F',
     rules: { F: '+F--F+' },
-    angle: 45, draw: 'F', max: 15, default: 5,
+    angle: 45, draw: 'F', max: 15,
   },
 };
 
@@ -334,11 +340,15 @@ function exportSVG() {
 function setCurve(key) {
   currentKey = key;
   const spec = curveSpec();
-  currentN = clamp(currentN, 1, spec.max);
+  currentN = 0;
   const iterSlider = document.getElementById('iterSlider');
+  const autoWidth = document.getElementById('autoWidth');
+  const smoothCheck = document.getElementById('smoothCheck');
   iterSlider.max = spec.max;
-  iterSlider.value = currentN;
-  document.getElementById('iterValue').textContent = currentN;
+  iterSlider.value = 0;
+  document.getElementById('iterValue').textContent = 0;
+  smoothCheck.checked = false;
+  autoWidth.checked = true;
   regenerate();
 }
 
