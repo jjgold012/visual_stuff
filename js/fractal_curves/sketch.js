@@ -41,6 +41,90 @@ const CURVES = {
     rules: { F: '+F--F+' },
     angle: 45, draw: 'F', max: 15,
   },
+  peano: {
+    key: 'peano', label: 'Peano',
+    axiom: 'X',
+    rules: { X: 'XFYFX+F+YFXFY-F-XFYFX', Y: 'YFXFY-F-XFYFX+F+YFXFY' },
+    angle: 90, draw: 'F', shrink: 3, max: 6,
+  },
+  peano_alt: {
+    key: 'peano_alt', label: 'Peano (alt)',
+    axiom: 'F',
+    rules: { F: 'F+F-F-FF-F-F-FF' },
+    angle: 90, draw: 'F', shrink: 3, max: 6,
+  },
+  koch: {
+    key: 'koch', label: 'Koch',
+    axiom: 'F',
+    rules: { F: 'F+F-F-F+F' },
+    angle: 90, draw: 'F', shrink: 3, max: 10,
+  },
+  koch_snowflake: {
+    key: 'koch_snowflake', label: 'Koch snowflake',
+    axiom: 'F++F++F',
+    rules: { F: 'F-F++F-F' },
+    angle: 60, draw: 'F', shrink: 3, max: 8, closed: true,
+  },
+  koch_60: {
+    key: 'koch_60', label: 'Koch curve 60\u00b0',
+    axiom: 'F',
+    rules: { F: 'F-F++F-F' },
+    angle: 60, draw: 'F', shrink: 3, max: 10,
+  },
+  koch_square: {
+    key: 'koch_square', label: 'Koch square island',
+    axiom: 'F+F+F+F',
+    rules: { F: 'F+F-F-F+F' },
+    angle: 90, draw: 'F', shrink: 3, max: 8, closed: true,
+  },
+  cesaro: {
+    key: 'cesaro', label: 'Ces\u00e0ro curve 85\u00b0',
+    axiom: 'F',
+    rules: { F: 'F+F--F+F' },
+    angle: 85, draw: 'F', shrink: 2.174, max: 9,
+  },
+  minkowski: {
+    key: 'minkowski', label: 'Minkowski sausage',
+    axiom: 'F',
+    rules: { F: 'F+F-F-FF+F+F-F' },
+    angle: 90, draw: 'F', shrink: 4, max: 6,
+  },
+  minkowski_island: {
+    key: 'minkowski_island', label: 'Minkowski island',
+    axiom: 'F+F+F+F',
+    rules: { F: 'F+F-F-FF+F+F-F' },
+    angle: 90, draw: 'F', shrink: 4, max: 5, closed: true,
+  },
+  sierpinski_curve: {
+    key: 'sierpinski_curve', label: 'Sierpi\u0144ski curve',
+    axiom: 'F+XF+F+XF',
+    rules: { X: 'XF-F+F-XF+F+XF-F+F-X' },
+    angle: 90, draw: 'F', shrink: 2, max: 6, closed: true,
+  },
+  gosper_island: {
+    key: 'gosper_island', label: 'Gosper island',
+    axiom: 'XF+XF+XF+XF+XF+XF',
+    rules: { X: 'X+YF++YF-FX--FXFX-YF+', Y: '-FX+YFYF++YF+FX--FX-Y' },
+    angle: 60, draw: 'F', shrink: 2.646, max: 3, closed: true,
+  },
+  terdragon: {
+    key: 'terdragon', label: 'Terdragon',
+    axiom: 'F',
+    rules: { F: 'F+F-F' },
+    angle: 120, draw: 'F', shrink: 1.732, max: 9,
+  },
+  tree: {
+    key: 'tree', label: 'Fractal tree',
+    axiom: '++0',
+    rules: { 0: '1[+0]-0', 1: '11' },
+    angle: 45, draw: '01', max: 8,
+  },
+  plant: {
+    key: 'plant', label: 'Fractal plant',
+    axiom: '-X',
+    rules: { X: 'F+[[X]-X]-F[-FX]+X', F: 'FF' },
+    angle: 25, draw: 'F', max: 6,
+  },
 };
 
 const CMAPS = {
@@ -71,7 +155,7 @@ const CMAPS = {
   grayscale: { label: 'Grayscale', stops: ['#000000', '#ffffff'] },
 };
 
-let pts = [];
+let paths = [];
 let segColors = [];
 let lwPx = 2;
 let fit = null;
@@ -106,17 +190,25 @@ function interpretPoints(spec, seq, n) {
   const stepSize = spec.shrink ? 1 / Math.pow(spec.shrink, n) : 1;
   const rad = (Math.PI * spec.angle) / 180;
   let x = 0, y = 0, a = 0;
-  const out = [[0, 0]];
+  const paths = [[[0, 0]]];
+  let cur = paths[0];
   const stack = [];
+  let cut = false;
   for (let i = 0; i < seq.length; i++) {
     const c = seq[i];
     if (drawSet.has(c)) {
+      if (cut) {
+        cur = [[x, y]];
+        paths.push(cur);
+        cut = false;
+      }
       x += stepSize * Math.cos(a);
       y += stepSize * Math.sin(a);
-      out.push([x, y]);
+      cur.push([x, y]);
     } else if (c === 'f') {
       x += stepSize * Math.cos(a);
       y += stepSize * Math.sin(a);
+      cut = true;
     } else if (c === '+') {
       a += rad;
     } else if (c === '-') {
@@ -128,11 +220,14 @@ function interpretPoints(spec, seq, n) {
     } else if (c === ']') {
       const s = stack.pop();
       x = s[0]; y = s[1]; a = s[2];
+      cut = true;
     }
   }
-  if (spec.closed) out.push(out[0].slice());
-  for (const p of out) p[1] = -p[1];
-  return out;
+  if (spec.closed) cur.push(cur[0].slice());
+  for (const path of paths) {
+    for (let i = 0; i < path.length; i++) path[i][1] = -path[i][1];
+  }
+  return paths;
 }
 
 function octagonizePolyline(points, frac = 0.3) {
@@ -249,9 +344,13 @@ function regenerate() {
   const n = currentN;
   const seq = generateSequence(spec, n);
   let raw = interpretPoints(spec, seq, n);
-  if (el('smoothCheck').checked) raw = octagonizePolyline(raw, 0.3);
-  pts = raw;
-  segCount = Math.max(0, pts.length - 1);
+  if (el('smoothCheck').checked) {
+    raw = raw.map(function (p) { return octagonizePolyline(p, 0.3); });
+  }
+  paths = raw;
+  let count = 0;
+  for (let i = 0; i < raw.length; i++) count += Math.max(0, raw[i].length - 1);
+  segCount = count;
 
   segColors = buildSegmentColors(segCount);
 
@@ -269,6 +368,7 @@ function regenerate() {
 
 function computeFit() {
   if (fit) return fit;
+  const pts = [].concat.apply([], paths);
   let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
   for (const p of pts) {
     if (p[0] < minx) minx = p[0];
@@ -295,14 +395,18 @@ function draw() {
   const f = computeFit();
   strokeCap(ROUND);
   strokeJoin(ROUND);
-  for (let i = 0; i < segCount; i++) {
-    const c = segColors[i];
-    stroke(c[0], c[1], c[2]);
-    strokeWeight(lwPx);
-    line(
-      pts[i][0] * f.s + f.ox, pts[i][1] * f.s + f.oy,
-      pts[i + 1][0] * f.s + f.ox, pts[i + 1][1] * f.s + f.oy
-    );
+  let si = 0;
+  for (let pi = 0; pi < paths.length; pi++) {
+    const path = paths[pi];
+    for (let i = 0; i + 1 < path.length; i++) {
+      const c = segColors[si++];
+      stroke(c[0], c[1], c[2]);
+      strokeWeight(lwPx);
+      line(
+        path[i][0] * f.s + f.ox, path[i][1] * f.s + f.oy,
+        path[i + 1][0] * f.s + f.ox, path[i + 1][1] * f.s + f.oy
+      );
+    }
   }
 }
 
@@ -312,13 +416,18 @@ function exportSVG() {
   const lwData = (lwPx / f.s).toFixed(4);
   const rgb = (c) =>
     'rgb(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ')';
+  let si = 0;
   const parts = new Array(segCount);
-  for (let i = 0; i < segCount; i++) {
-    parts[i] =
-      '<line x1="' + pts[i][0] + '" y1="' + pts[i][1] +
-      '" x2="' + pts[i + 1][0] + '" y2="' + pts[i + 1][1] +
-      '" stroke="' + rgb(segColors[i]) + '" stroke-width="' + lwData +
-      '" stroke-linecap="round"/>';
+  for (let pi = 0; pi < paths.length; pi++) {
+    const path = paths[pi];
+    for (let i = 0; i + 1 < path.length; i++) {
+      const j = si++;
+      parts[j] =
+        '<line x1="' + path[i][0] + '" y1="' + path[i][1] +
+        '" x2="' + path[i + 1][0] + '" y2="' + path[i + 1][1] +
+        '" stroke="' + rgb(segColors[j]) + '" stroke-width="' + lwData +
+        '" stroke-linecap="round"/>';
+    }
   }
   const svg =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +

@@ -21,13 +21,37 @@
           <div class="control-group">
             <label for="curveSelect">Curve</label>
             <select id="curveSelect">
-              <option value="hilbert">Hilbert</option>
-              <option value="moore">Moore</option>
-              <option value="dragon">Dragon</option>
-              <option value="gosper">Gosper</option>
-              <option value="sierpinski">Sierpiński arrowhead</option>
-              <option value="sierpinski_triangle">Sierpiński triangle</option>
-              <option value="levy">Lévy C</option>
+              <optgroup label="Space-filling curves">
+                <option value="hilbert">Hilbert</option>
+                <option value="moore">Moore</option>
+                <option value="peano">Peano</option>
+                <option value="peano_alt">Peano (alt)</option>
+                <option value="gosper">Gosper</option>
+                <option value="gosper_island">Gosper island</option>
+                <option value="sierpinski_curve">Sierpiński curve</option>
+                <option value="terdragon">Terdragon</option>
+              </optgroup>
+              <optgroup label="Koch &amp; Cesàro">
+                <option value="koch">Koch</option>
+                <option value="koch_60">Koch curve 60°</option>
+                <option value="koch_snowflake">Koch snowflake</option>
+                <option value="koch_square">Koch square island</option>
+                <option value="cesaro">Cesàro curve 85°</option>
+                <option value="minkowski">Minkowski sausage</option>
+                <option value="minkowski_island">Minkowski island</option>
+              </optgroup>
+              <optgroup label="Sierpiński">
+                <option value="sierpinski">Sierpiński arrowhead</option>
+                <option value="sierpinski_triangle">Sierpiński triangle</option>
+              </optgroup>
+              <optgroup label="Trees &amp; plants">
+                <option value="tree">Fractal tree</option>
+                <option value="plant">Fractal plant</option>
+              </optgroup>
+              <optgroup label="Dragon &amp; Lévy">
+                <option value="dragon">Dragon</option>
+                <option value="levy">Lévy C</option>
+              </optgroup>
             </select>
           </div>
 
