@@ -17,6 +17,12 @@ const CURVES = {
     rules: { X: 'X+YF+', Y: '-FX-Y' },
     angle: 90, draw: 'F', max: 15,
   },
+  twindragon: {
+    key: 'twindragon', label: 'Twindragon',
+    axiom: 'FX+FX+',
+    rules: { X: 'X+YF', Y: 'FX-Y' },
+    angle: 90, draw: 'F', shrink: 1.414, max: 15, closed: true,
+  },
   gosper: {
     key: 'gosper', label: 'Gosper',
     axiom: 'A',
