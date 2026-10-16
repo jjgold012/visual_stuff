@@ -103,9 +103,9 @@ const CURVES = {
   },
   gosper_island: {
     key: 'gosper_island', label: 'Gosper island',
-    axiom: 'XF+XF+XF+XF+XF+XF',
-    rules: { X: 'X+YF++YF-FX--FXFX-YF+', Y: '-FX+YFYF++YF+FX--FX-Y' },
-    angle: 60, draw: 'F', shrink: 2.646, max: 3, closed: true,
+    axiom: 'F+F+F+F+F+F',
+    rules: { F: 'F+F-F'},
+    angle: 60, draw: 'F', shrink: 2.646, max: 10, closed: true,
   },
   terdragon: {
     key: 'terdragon', label: 'Terdragon',
