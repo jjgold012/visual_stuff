@@ -70,7 +70,8 @@ body {
   cursor: pointer;
 }
 
-select {
+select,
+input[type="number"] {
   padding: 5px 10px;
   border: 1px solid #0f3460;
   border-radius: 6px;
@@ -78,6 +79,10 @@ select {
   color: #e0e0e0;
   font-size: 0.95rem;
   cursor: pointer;
+}
+
+#customColorCount {
+  width: 68px;
 }
 
 #customStops {

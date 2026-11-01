@@ -316,31 +316,28 @@ function addColorStop(value) {
   inp.addEventListener('input', function () {
     regenerate();
   });
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'mini';
-  btn.textContent = '\u00d7';
-  btn.addEventListener('click', function () {
-    if (el('customStops').children.length > 1) {
-      wrap.remove();
-      if (el('cmapSelect').value === 'custom') regenerate();
-    }
-  });
-  wrap.append(inp, btn);
+  wrap.append(inp);
   el('customStops').appendChild(wrap);
+}
+
+function syncCustomStops(count) {
+  const colors = ['#e94560', '#f0a500', '#2dd4bf', '#818cf8', '#38bdf8', '#34d399'];
+  const stops = el('customStops');
+  while (stops.children.length > count) stops.lastElementChild.remove();
+  while (stops.children.length < count) {
+    const index = stops.children.length;
+    addColorStop(colors[index % colors.length]);
+  }
 }
 
 function initCustomStops() {
   if (customInitialized) return;
   customInitialized = true;
-  addColorStop('#e94560');
-  addColorStop('#f0a500');
-  addColorStop('#2dd4bf');
-  el('addStopBtn').addEventListener('click', function () {
-    const inputs = el('customStops').querySelectorAll('input[type="color"]');
-    const defaults = ['#e94560', '#f0a500', '#2dd4bf', '#818cf8', '#38bdf8', '#34d399'];
-    const next = inputs.length < defaults.length ? defaults[inputs.length] : '#e94560';
-    addColorStop(next);
+  syncCustomStops(parseInt(el('customColorCount').value, 10));
+  el('customColorCount').addEventListener('change', function () {
+    const count = clamp(parseInt(this.value, 10) || 2, 2, 12);
+    this.value = count;
+    syncCustomStops(count);
     if (el('cmapSelect').value === 'custom') regenerate();
   });
 }
